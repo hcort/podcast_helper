@@ -1,0 +1,6 @@
+pip==23.1.2
+requests==2.31.0
+setuptools==68.0.0
+python-slugify==8.0.1
+selenium==4.10.0
+mutagen~=1.46.0
