@@ -1,16 +1,11 @@
-import urllib
-
-from os.path import isfile
-from mutagen.mp3 import MP3
-from mutagen.id3 import ID3, APIC, error
 from mutagen.easyid3 import EasyID3
+from mutagen.id3 import ID3, APIC
+from mutagen.mp3 import MP3
 
 
 def write_cover_art(art_filename, mp3_name):
     print(f'writing {art_filename} into {mp3_name}')
-    # put some ID3 tags into the mp3 file
     audio = MP3(mp3_name, ID3=ID3)
-    # add ID3 tag if it doesn't exist
     try:
         audio.add_tags()
     except Exception as ex:
@@ -39,7 +34,26 @@ def write_mp3_tags(entry_title, podcast_title, entry_date, art_filename, mp3_nam
     audio = EasyID3(mp3_name)
     audio["title"] = entry_title
     audio["artist"] = podcast_title
-    audio["album"] = podcast_title
+    audio["album"] = f'Podcast {podcast_title}'
     audio["date"] = entry_date
     audio["genre"] = 'Podcast'
     audio.save()
+
+
+def write_id3_tags_dict(mp3_filename, art_filename, tag_dict={}):
+    from mutagen.id3 import ID3NoHeaderError
+    from mutagen.easyid3 import EasyID3
+    from mutagen import File
+    try:
+        meta = EasyID3(mp3_filename)
+    except ID3NoHeaderError:
+        meta = File(mp3_filename, easy=True)
+        meta.add_tags()
+    for tag in tag_dict:
+        try:
+            meta[tag] = tag_dict[tag]
+        except Exception as err:
+            # mp3 and mp4 files have different sets of valid tags
+            print(err)
+    meta.save()
+    write_cover_art(mp3_filename, art_filename)

@@ -49,7 +49,7 @@ def list_episodes(driver=None, base_url='', current_url='', prev_page='', page_n
         next_page_button = driver.find_element(By.XPATH, '/html/body/div[2]/div/div[4]/div/nav/ul/li[6]/a')
         episodes_in_page['next_page'] = next_page_button.get_attribute('href') if next_page_button else ''
     except TimeoutException as ex:
-        print('Error accessing {}: Timeout: {}'.format(podcast_id, str(ex)))
+        print('Error accessing {}: Timeout: {}'.format(current_url, str(ex)))
     finally:
         pass
     return episodes_in_page

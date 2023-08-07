@@ -1,0 +1,110 @@
+import os
+import time
+from urllib.parse import urlparse
+import requests
+from selenium import webdriver
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.webdriver import Keys
+from selenium.webdriver.common.by import By
+from slugify import slugify
+from mp3_tags import write_id3_tags_dict
+
+
+def download_file(output_path, link, name):
+    filename = os.path.join(output_path, name)
+    if not os.path.exists(filename):
+        with open(filename, 'wb') as handle:
+            try:
+                response = requests.get(link, stream=True)
+                if not response.ok:
+                    print('Error getting file: ' + link)
+                for block in response.iter_content(1024):
+                    if not block:
+                        break
+                    handle.write(block)
+            except ConnectionError as err:
+                print('Error getting file: ' + link)
+                print(err)
+            except Exception as err:
+                print('Error getting file: ' + link)
+                print(err)
+    return filename
+
+
+def list_all_podcasts(substack_link):
+    url_parsed = urlparse(substack_link)
+    archive_url = f'https://{url_parsed.netloc}/archive'
+    all_podcast_links = []
+    driver = webdriver.Firefox()
+    try:
+        keep_scrolling = True
+        driver.get(archive_url)
+        while keep_scrolling:
+            try:
+                scroll_element = driver.find_element(By.CLASS_NAME, "visibility-check")
+                driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.END)
+                time.sleep(2)
+            except NoSuchElementException as err:
+                keep_scrolling = False
+        all_podcast_entries = driver.find_elements(By.CSS_SELECTOR, 'a.podcast')
+        all_podcast_links = [item.get_attribute('href') for item in all_podcast_entries]
+    except TimeoutException as ex:
+        print('Error accessing {}: Timeout: {}'.format(link, str(ex)))
+    finally:
+        driver.close()
+    return all_podcast_links
+
+
+def get_substack_episode(output_path, episode_url):
+    os.environ['MOZ_HEADLESS'] = '1'
+    driver = webdriver.Firefox()
+    url_parsed = urlparse(episode_url)
+    try:
+        # div.single-post article div div.container audio
+        driver.get(episode_url)
+        elements = driver.find_elements(By.TAG_NAME, "audio")
+        mp3_url = elements[0].get_attribute("src") if (len(elements) > 0) else ''
+        if not mp3_url:
+            print(f'Error reading {episode_url}: No audio found.')
+            return
+        elements = driver.find_elements(By.CLASS_NAME, 'navbar-title-link')
+        podcast_name = elements[0].text if (len(elements) > 0) else url_parsed.netloc.split('.')[0]
+        podcast_url = elements[0].get_attribute('href') if (len(elements) > 0) else ''
+        elements = driver.find_elements(By.XPATH, '/html/body/div[1]/div[1]/div[2]/div/div[1]/div/article/div['
+                                                      '2]/div/div[1]/div[2]/h1')
+        episode_title = elements[0].text if (len(elements) > 0) else url_parsed.path.split('/')[-1]
+        elements = driver.find_elements(By.CLASS_NAME, 'tw-object-cover')
+        podcast_picture = elements[0].get_attribute("src") if (len(elements) > 0) else ''
+        picture_extension = podcast_picture.split('.')[-1]
+        elements = driver.find_elements(By.XPATH, '/html/body/div[1]/div[1]/div[2]/div/div[1]/div/article/div['
+                                                       '2]/div/div[5]/div/div/div[2]/div/div')
+        podcast_author = elements[0].text if (len(elements) > 0) else podcast_name
+        elements = driver.find_elements(By.CLASS_NAME, 'available-content')
+        episode_description = elements[0].text
+        elements = driver.find_elements(By.XPATH, '/html/body/div[1]/div[1]/div[2]/div/div[1]/div/article/div['
+                                                '2]/div/div[2]/div[1]/div/div/time')
+        episode_date = elements[0].get_attribute('datetime')[:10] if (len(elements) > 0) else ''
+        if podcast_name and episode_date and episode_title:
+            mp3_name = slugify(f'{podcast_name} - {episode_date} - {episode_title}')
+        else:
+            mp3_name = {mp3_url.split('/')[-2]}
+        if mp3_url and not os.path.exists(os.path.join(output_path, mp3_name + '.mp3')):
+            mp3_filename = download_file(output_path, mp3_url, mp3_name + '.mp3')
+            art_filename = download_file(output_path, podcast_picture, f'{mp3_name}.{picture_extension}')
+            tag_dict = {
+                'artist': podcast_author,
+                'album': f'Podcast {podcast_name}',
+                'title': episode_title,
+                'date': episode_date,
+                'website': url_parsed.netloc,
+                'comment': f'{episode_url}\n{podcast_url}\n{episode_description}',
+                'description': f'{episode_url}\n{podcast_url}\n{episode_description}',
+                'genre': 'Podcast'
+            }
+            write_id3_tags_dict(mp3_filename, art_filename, tag_dict)
+    except TimeoutException as ex:
+        print('Error accessing {}: Timeout: {}'.format(episode_url, str(ex)))
+    except Exception as ex:
+        print('Error accessing {}: Exception: {}'.format(episode_url, str(ex)))
+    finally:
+        driver.close()
