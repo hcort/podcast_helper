@@ -6,3 +6,5 @@ selenium==4.10.0
 mutagen~=1.46.0
 pytube~=15.0.0
 moviepy~=1.0.3
+beautifulsoup4~=4.12.2
+tqdm~=4.65.0

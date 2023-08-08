@@ -3,12 +3,11 @@ import os
 import requests
 from selenium.common import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.firefox import webdriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from slugify import slugify
 
-from get_driver import hijack_cookies
+from get_driver import hijack_cookies, get_driver
 from mp3_tags import write_mp3_tags
 
 
@@ -105,6 +104,5 @@ def get_all_episodes(driver=None, episode_list=[]):
 
 
 def get_ivoox_episode(output_path, episode_url):
-    os.environ['MOZ_HEADLESS'] = '1'
-    driver = webdriver.Firefox()
+    driver = get_driver()
     get_episode(driver=driver, episode=episode_url, output_dir=output_path)

@@ -1,16 +1,6 @@
-import os
 import pytube as pytube
 import requests
-import moviepy.editor as mp
 from mp3_tags import write_id3_tags_dict
-
-
-def mp4_to_mp3(path, mp4_name, extension):
-    mp4_file = os.path.join(path, f'{mp4_name}.{extension}')
-    mp3_file = os.path.join(path, f'{mp4_name}.mp3')
-    clip = mp.AudioFileClip(mp4_file)
-    clip.write_audiofile(mp3_file)
-    return mp3_file
 
 
 def save_image_from_url(thumbnail_url, output_path, nombre):

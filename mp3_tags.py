@@ -1,6 +1,18 @@
+import os
+import moviepy.editor as mp
 from mutagen.easyid3 import EasyID3
 from mutagen.id3 import ID3, APIC
 from mutagen.mp3 import MP3
+
+
+def mp4_to_mp3(path, mp4_name, extension='mp4', delete_mp4=False):
+    mp4_file = os.path.join(path, f'{mp4_name}.{extension}')
+    mp3_file = os.path.join(path, f'{mp4_name}.mp3')
+    clip = mp.AudioFileClip(mp4_file)
+    clip.write_audiofile(mp3_file)
+    if delete_mp4:
+        os.remove(mp4_file)
+    return mp3_file
 
 
 def write_cover_art(art_filename, mp3_name):
@@ -56,4 +68,5 @@ def write_id3_tags_dict(mp3_filename, art_filename, tag_dict={}):
             # mp3 and mp4 files have different sets of valid tags
             print(err)
     meta.save()
-    write_cover_art(mp3_filename, art_filename)
+    if art_filename:
+        write_cover_art(mp3_filename, art_filename)

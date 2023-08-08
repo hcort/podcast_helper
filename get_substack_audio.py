@@ -7,21 +7,48 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from slugify import slugify
+from tqdm import tqdm
+
 from mp3_tags import write_id3_tags_dict
 
 
-def download_file(output_path, link, name):
+class ProgressVisorTQDM:
+    def __init__(self, message: str):
+        self.total_iterations = 0
+        self.__tqdm_progress = tqdm(position=0, leave=True, desc=message)
+
+    @property
+    def total(self):
+        return self.total_iterations
+
+    @total.setter
+    def total(self, total_iterations):
+        self.total_iterations = total_iterations
+        self.__tqdm_progress.total = total_iterations
+
+    def update(self):
+        self.__tqdm_progress.update()
+
+
+def download_file(output_path, link, name, show_progress=False):
     filename = os.path.join(output_path, name)
     if not os.path.exists(filename):
         with open(filename, 'wb') as handle:
             try:
                 response = requests.get(link, stream=True)
+                block_size = 1024 * 64
+                progress = None
+                if show_progress:
+                    progress = ProgressVisorTQDM(f'Downloading\n{link} -> {filename}\n')
+                    progress.total = int(response.headers.get('content-length')) // block_size
                 if not response.ok:
                     print('Error getting file: ' + link)
-                for block in response.iter_content(1024):
+                for block in response.iter_content(block_size):
                     if not block:
                         break
                     handle.write(block)
+                    if progress:
+                        progress.update()
             except ConnectionError as err:
                 print('Error getting file: ' + link)
                 print(err)
@@ -49,7 +76,7 @@ def list_all_podcasts(substack_link):
         all_podcast_entries = driver.find_elements(By.CSS_SELECTOR, 'a.podcast')
         all_podcast_links = [item.get_attribute('href') for item in all_podcast_entries]
     except TimeoutException as ex:
-        print('Error accessing {}: Timeout: {}'.format(link, str(ex)))
+        print('Error accessing {}: Timeout: {}'.format(substack_link, str(ex)))
     finally:
         driver.close()
     return all_podcast_links
@@ -71,18 +98,18 @@ def get_substack_episode(output_path, episode_url):
         podcast_name = elements[0].text if (len(elements) > 0) else url_parsed.netloc.split('.')[0]
         podcast_url = elements[0].get_attribute('href') if (len(elements) > 0) else ''
         elements = driver.find_elements(By.XPATH, '/html/body/div[1]/div[1]/div[2]/div/div[1]/div/article/div['
-                                                      '2]/div/div[1]/div[2]/h1')
+                                                  '2]/div/div[1]/div[2]/h1')
         episode_title = elements[0].text if (len(elements) > 0) else url_parsed.path.split('/')[-1]
         elements = driver.find_elements(By.CLASS_NAME, 'tw-object-cover')
         podcast_picture = elements[0].get_attribute("src") if (len(elements) > 0) else ''
         picture_extension = podcast_picture.split('.')[-1]
         elements = driver.find_elements(By.XPATH, '/html/body/div[1]/div[1]/div[2]/div/div[1]/div/article/div['
-                                                       '2]/div/div[5]/div/div/div[2]/div/div')
+                                                  '2]/div/div[5]/div/div/div[2]/div/div')
         podcast_author = elements[0].text if (len(elements) > 0) else podcast_name
         elements = driver.find_elements(By.CLASS_NAME, 'available-content')
         episode_description = elements[0].text
         elements = driver.find_elements(By.XPATH, '/html/body/div[1]/div[1]/div[2]/div/div[1]/div/article/div['
-                                                '2]/div/div[2]/div[1]/div/div/time')
+                                                  '2]/div/div[2]/div[1]/div/div/time')
         episode_date = elements[0].get_attribute('datetime')[:10] if (len(elements) > 0) else ''
         if podcast_name and episode_date and episode_title:
             mp3_name = slugify(f'{podcast_name} - {episode_date} - {episode_title}')

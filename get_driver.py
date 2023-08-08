@@ -20,7 +20,6 @@ def hijack_cookies(driver):
     return s
 
 
-
 def get_driver():
     # os.environ['MOZ_HEADLESS'] = '1'
     firefox_loc = r"C:\Program Files\Mozilla Firefox\firefox.exe"
