@@ -8,8 +8,9 @@ from mutagen.mp3 import MP3
 def mp4_to_mp3(path, mp4_name, extension='mp4', delete_mp4=False):
     mp4_file = os.path.join(path, f'{mp4_name}.{extension}')
     mp3_file = os.path.join(path, f'{mp4_name}.mp3')
-    clip = mp.AudioFileClip(mp4_file)
-    clip.write_audiofile(mp3_file)
+    if not os.path.exists(mp3_file):
+        clip = mp.AudioFileClip(mp4_file)
+        clip.write_audiofile(mp3_file)
     if delete_mp4:
         os.remove(mp4_file)
     return mp3_file

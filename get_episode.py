@@ -2,11 +2,13 @@ import os
 
 import requests
 from selenium.common import TimeoutException
+from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from slugify import slugify
 
+from episode_list import wait_for_cookies
 from get_driver import hijack_cookies, get_driver
 from mp3_tags import write_mp3_tags
 
@@ -53,24 +55,25 @@ def get_episode_cover_art(driver, output_dir, podcast_title):
     return img_filename
 
 
-def get_episode(driver=None, episode='', output_dir=''):
+def get_episode(driver=None, episode='', output_dir='', use_proxy=False):
     timeout = 5
     if not episode or not driver:
         return None
-    driver.get(episode)
+    if use_proxy:
+        proxy_server_option = 'eu15'
+        driver.get(f'https://{proxy_server_option}.proxysite.com')
+        input = driver.find_element(By.XPATH, '/html/body/div[2]/main/div[1]/div/div[3]/form/div[2]/input')
+        input.send_keys(episode)
+        input.send_keys(Keys.RETURN)
+    else:
+        driver.get(episode)
+    wait_for_cookies(driver, timeout=10, url=episode)
     try:
-        cookie_button_present = EC.presence_of_element_located((By.ID, "didomi-notice-agree-button"))
+        cookie_button_present = EC.presence_of_element_located((By.ID, "lnk_download"))
         WebDriverWait(driver, timeout).until(cookie_button_present)
-        cookie_button = driver.find_element(By.ID, "didomi-notice-agree-button")
-        cookie_button.click()
-        WebDriverWait(driver, timeout).until_not(cookie_button_present)
-    except TimeoutException as ex:
-        # cookies already accepted
-        print(f'Error clicking cookies button {episode}')
-    download_buttons = driver.find_elements(By.ID, "lnk_download")
-    # driver.execute_script("arguments[0].scrollIntoView(true);", download_buttons[1])
-    download_buttons[1].click()
-    try:
+        download_buttons = driver.find_elements(By.ID, "lnk_download")
+        # driver.execute_script("arguments[0].scrollIntoView(true);", download_buttons[1])
+        download_buttons[1].click()
         next_page_present = EC.presence_of_element_located((By.CLASS_NAME, "downloadlink.displaynone"))
         WebDriverWait(driver, timeout).until(next_page_present)
         download_links_container = driver.find_element(By.CLASS_NAME, "downloadlink.displaynone")
@@ -103,6 +106,6 @@ def get_all_episodes(driver=None, episode_list=[]):
         get_episode(driver, episode)
 
 
-def get_ivoox_episode(output_path, episode_url):
-    driver = get_driver()
-    get_episode(driver=driver, episode=episode_url, output_dir=output_path)
+def get_ivoox_episode(output_path, episode_url, recycled_driver=None, use_proxy=False):
+    driver = recycled_driver if recycled_driver else get_driver()
+    get_episode(driver=driver, episode=episode_url, output_dir=output_path, use_proxy=use_proxy)

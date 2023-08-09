@@ -6,12 +6,13 @@ output_path_def = './output'
 
 
 if __name__ == '__main__':
+    use_proxy = True
     links = [
              ]
     for link in links:
         if link.find('youtube') != -1:
             get_youtube_episode(output_path=output_path_def, episode_url=link)
         elif link.find('ivoox') != -1:
-            get_ivoox_episode(output_path=output_path_def, episode_url=link)
+            get_ivoox_episode(output_path=output_path_def, episode_url=link, use_proxy=use_proxy)
         elif link.find('substack') != -1:
             get_substack_episode(output_path=output_path_def, episode_url=link)

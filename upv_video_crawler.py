@@ -68,7 +68,6 @@ def parse_index(index_url, output_path):
             print(f'Error getting index: {next_url} - Exception: {err}')
             next_url = ''
     for video_link in all_video_urls:
-        # video link is a <a...> node in the soup.
         video_id = get_video_id(video_link)
         [video_date, video_author] = get_video_subtitle(video_link)
         mp4_url = f'https://ehutb.ehu.eus/trackfile/{video_id}.mp4'
@@ -82,10 +81,23 @@ def parse_index(index_url, output_path):
             'website': index_url,
             'genre': 'Podcast'
         }
-        mp4_filename = slugify(f"{serie_title} - {tag_dict['title']}")
-        full_mp4_filename = download_file(output_path, mp4_url, mp4_filename + '.mp4', show_progress=False)
-        mp3_filename = mp4_to_mp3(output_path, mp4_filename, delete_mp4=True)
-        write_id3_tags_dict(mp3_filename=mp3_filename, art_filename=None, tag_dict=tag_dict)
+        mp4_filename = slugify(f"{serie_title} - {tag_dict['title']}", max_length=150)
+        base_filename = os.path.join(output_path, mp4_filename)
+        try:
+            # video link is a <a...> node in the soup.
+            if not os.path.exists(base_filename+'.mp4') and not os.path.exists(base_filename+'.mp3'):
+                print(f'Download {mp4_filename}')
+                full_mp4_filename = download_file(output_path, mp4_url, mp4_filename + '.mp4', show_progress=False)
+                mp3_filename = mp4_to_mp3(output_path, mp4_filename, delete_mp4=True)
+                write_id3_tags_dict(mp3_filename=mp3_filename, art_filename=None, tag_dict=tag_dict)
+            else:
+                print(f'Skip {mp4_filename}')
+        except Exception as ex:
+            print(f"Error descargando vídeo: {tag_dict['title']} - {ex}")
+            if os.path.exists(base_filename+'.mp4'):
+                os.remove(base_filename+'.mp4')
+            if os.path.exists(base_filename+'.mp3'):
+                os.remove(base_filename+'.mp3')
 
 
 def get_upv_episode(output_path, episode_link):
@@ -128,7 +140,7 @@ def get_upv_episode(output_path, episode_link):
         WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, 'div#masterVideoWrapper>video>source')))
         video = driver.find_element(By.CSS_SELECTOR, 'div#masterVideoWrapper>video>source').get_attribute('src')
-        mp4_filename = slugify(f"{series} - {tag_dict['title']}")
+        mp4_filename = slugify(f"{series} - {tag_dict['title']}", max_length=150)
         download_file(output_path, video, mp4_filename + '.mp4')
         mp3_filename = mp4_to_mp3(path=output_path, mp4_name=mp4_filename)
         write_id3_tags_dict(mp3_filename=mp3_filename, art_filename=None, tag_dict=tag_dict)
