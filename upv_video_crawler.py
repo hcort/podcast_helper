@@ -53,7 +53,7 @@ def parse_index(index_url, output_path):
     serie_title = ''
     while next_url:
         try:
-            response = requests.get(next_url)
+            response = requests.get(next_url, headers={"Accept-Language": "es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3"})
             if not response.ok:
                 print(f'Error getting index: {next_url}')
                 break
@@ -135,6 +135,7 @@ def get_upv_episode(output_path, episode_link):
             'website': episode_link,
             'genre': 'Podcast'
         }
+        # FIXME Skip ii-international-conference-on-the-inklings-sin-titulo (?????????????????????)
         WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.ID, "paellaiframe")))
         driver.switch_to.frame("paellaiframe")
         WebDriverWait(driver, timeout).until(
