@@ -1,9 +1,10 @@
 import os
-
 import requests
-from selenium.common import TimeoutException
-from selenium.webdriver import Keys
+# from selenium.common import TimeoutException
+# from selenium.webdriver import Keys
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from slugify import slugify
@@ -69,29 +70,88 @@ def get_episode(driver=None, episode='', output_dir='', use_proxy=False):
         driver.get(episode)
     wait_for_cookies(driver, timeout=10, url=episode)
     try:
-        cookie_button_present = EC.presence_of_element_located((By.ID, "lnk_download"))
-        WebDriverWait(driver, timeout).until(cookie_button_present)
-        download_buttons = driver.find_elements(By.ID, "lnk_download")
-        # driver.execute_script("arguments[0].scrollIntoView(true);", download_buttons[1])
-        download_buttons[1].click()
-        next_page_present = EC.presence_of_element_located((By.CLASS_NAME, "downloadlink.displaynone"))
-        WebDriverWait(driver, timeout).until(next_page_present)
-        download_links_container = driver.find_element(By.CLASS_NAME, "downloadlink.displaynone")
-        download_links = download_links_container.find_elements(By.TAG_NAME, "a")
-        requests_session = hijack_cookies(driver)
-        requests_session = set_headers(requests_session, download_links[0].get_attribute('href'))
-        redirected = requests_session.get(download_links[0].get_attribute('href'))
-        mp3_filename_end = redirected.url.find('.mp3')
-        mp3_filename_start = redirected.url.rfind('/', 0, mp3_filename_end)
-        mp3_filename = redirected.url[mp3_filename_start+1:mp3_filename_end+4]
         podcast_title = driver.find_element(By.CLASS_NAME, 'normal').get_attribute('title')
         podcast_date = driver.find_element(By.CLASS_NAME, 'icon-date').text
         episode_title = driver.find_element(By.TAG_NAME, 'h1').text
+        download_link = expand_download_button(driver, timeout)
+        requests_session = hijack_cookies(driver)
+        requests_session = set_headers(requests_session, download_link.get_attribute('href'))
+        mp3_link = download_link.get_attribute('href')
+        redirected = requests_session.get(mp3_link)
+        mp3_filename_end = redirected.url.find('.mp3')
+        mp3_filename_start = redirected.url.rfind('/', 0, mp3_filename_end)
+        mp3_filename = redirected.url[mp3_filename_start+1:mp3_filename_end+4]
         mp3_filename = create_filename_and_folders(output_dir, podcast_title, episode_title) + '.mp3'
         with open(mp3_filename, mode='wb') as localfile:
             localfile.write(redirected.content)
         image_filename = get_episode_cover_art(driver, output_dir, podcast_title)
         write_mp3_tags(episode_title, podcast_title, podcast_date, image_filename, mp3_filename)
+    except TimeoutException as ex:
+        # cookies already accepted
+        print(f'Could not download episode {episode} - {ex}')
+    except Exception as ex:
+        print(f'Could not download episode {episode} - {ex}')
+
+
+def expand_download_button(driver, timeout):
+    download_buttons_present = EC.presence_of_element_located((By.ID, "lnk_download"))
+    WebDriverWait(driver, timeout).until(download_buttons_present)
+    download_buttons = driver.find_elements(By.ID, "lnk_download")
+    download_buttons[1].click()
+    next_page_present = EC.presence_of_element_located((By.CLASS_NAME, "downloadlink"))
+    WebDriverWait(driver, timeout).until(next_page_present)
+    download_links_container = driver.find_element(By.CLASS_NAME, "downloadlink")
+    download_links = download_links_container.find_elements(By.TAG_NAME, "a")
+    return download_links[0]
+
+
+def get_episode_opera_vpn(driver=None, episode='', output_dir=''):
+    """
+
+    :param driver:
+    :param episode:
+    :param output_dir:
+    :return:
+
+        Download a podcast episode using the Opera webdriver with the VPN enabled to avoid firewall blocks
+
+        I can't use the requests method to download the episode, as it's outside the Opera VPN, so I use
+        injected javascript to download the file into Opera's download folder and then move it to
+        the output_dir folder
+
+    """
+    import pathlib
+    from urllib.parse import urlparse
+    timeout = 5
+    if not episode or not driver:
+        return None
+    driver.get(episode)
+    wait_for_cookies(driver, timeout=10, url=episode)
+    try:
+        podcast_title = driver.find_element(By.CLASS_NAME, 'normal').get_attribute('title')
+        podcast_date = driver.find_element(By.CLASS_NAME, 'icon-date').text
+        episode_title = driver.find_element(By.TAG_NAME, 'h1').text
+        mp3_filename = create_filename_and_folders(output_dir, podcast_title, episode_title) + '.mp3'
+        download_link = expand_download_button(driver, timeout)
+        download_link.click()
+        audio_source_present = EC.presence_of_element_located((By.TAG_NAME, "source"))
+        WebDriverWait(driver, timeout).until(audio_source_present)
+        mp3_link = driver.find_element(By.TAG_NAME, "source").get_attribute('src')
+        parsed_url = urlparse(mp3_link)
+        mp3_filename_from_url = parsed_url.path[parsed_url.path.rfind('/')+1:]
+        temp_mp3_full_path = os.path.join(output_dir, mp3_filename_from_url)
+        driver.execute_script('let aLink = document.createElement("a");'
+                              'let videoSrc = document.querySelector("video").firstChild.src;'
+                              'aLink.href = videoSrc;'
+                              'aLink.download = "";'
+                              'aLink.click();')
+        # wait for download t complete
+        while not os.path.isfile(temp_mp3_full_path):
+            from time import sleep
+            sleep(3)
+        os.replace(temp_mp3_full_path, mp3_filename)
+        write_mp3_tags(entry_title=episode_title, podcast_title=podcast_title, entry_date=podcast_date,
+                       art_filename=None, mp3_name=mp3_filename)
     except TimeoutException as ex:
         # cookies already accepted
         print(f'Could not download episode {episode} - {ex}')
@@ -109,3 +169,12 @@ def get_all_episodes(driver=None, episode_list=[]):
 def get_ivoox_episode(output_path, episode_url, recycled_driver=None, use_proxy=False):
     driver = recycled_driver if recycled_driver else get_driver()
     get_episode(driver=driver, episode=episode_url, output_dir=output_path, use_proxy=use_proxy)
+    if not recycled_driver:
+        driver.close()
+
+
+def get_ivoox_episode_opera(output_path, episode_url, recycled_driver=None, use_proxy=False):
+    driver = recycled_driver if recycled_driver else get_driver()
+    get_episode_opera_vpn(driver=driver, episode=episode_url, output_dir=output_path, use_proxy=use_proxy)
+    if not recycled_driver:
+        driver.close()

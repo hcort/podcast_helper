@@ -17,6 +17,8 @@ def mp4_to_mp3(path, mp4_name, extension='mp4', delete_mp4=False):
 
 
 def write_cover_art(art_filename, mp3_name):
+    if not art_filename:
+        return
     print(f'writing {art_filename} into {mp3_name}')
     audio = MP3(mp3_name, ID3=ID3)
     try:
