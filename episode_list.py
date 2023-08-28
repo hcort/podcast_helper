@@ -1,5 +1,7 @@
-from selenium.common import TimeoutException
-from selenium.webdriver import Keys
+# from selenium.common import TimeoutException
+# from selenium.webdriver import Keys
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
@@ -134,10 +136,17 @@ def list_episodes_via_proxy(driver=None, start_url='', prev_page='', page_no=1):
     return episodes_in_page
 
 
+def get_ivoox_episode_list(recycled_driver, podcast_url, use_proxy=False):
+    driver = recycled_driver if recycled_driver else get_driver()
+    episodes_in_page = list_episodes(driver=driver, start_url=podcast_url, prev_page='', page_no=1, use_proxy=use_proxy)
+    if not recycled_driver:
+        driver.close()
+    return episodes_in_page
+
+
 if __name__ == '__main__':
     use_proxy = True
     links = [
-        'https://www.ivoox.com/podcast-todo-tranquilo-dunwich_sq_f1281218_1.html'
              ]
     driver = get_driver()
     for link in links:

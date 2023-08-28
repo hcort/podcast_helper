@@ -15,7 +15,6 @@ def hijack_cookies(driver):
     s.headers.update(headers)
     for cookie in cookies:
         # s.cookies.set_cookie(cookie)
-        print(f"{cookie['name']}: {cookie['value']}")
         s.cookies.set(cookie['name'], cookie['value'])
     return s
 
@@ -23,11 +22,11 @@ def hijack_cookies(driver):
 def get_driver():
     # os.environ['MOZ_HEADLESS'] = '1'
     firefox_loc = r"C:\Program Files\Mozilla Firefox\firefox.exe"
-    # options = webdriver.FirefoxOptions()
-    # options.binary_location = firefox_loc
-    # return webdriver.Firefox(options=options)
-    service = Service(executable_path=firefox_loc)
-    return webdriver.Chrome(service=service)
+    # service = Service(executable_path=firefox_loc)
+    # return webdriver.Firefox(service=service)
+    options = webdriver.FirefoxOptions()
+    options.binary_location = firefox_loc
+    return webdriver.Firefox(options=options)
 
 
 def get_driver_opera(opera_exe_location, opera_preferences_location):
