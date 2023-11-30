@@ -1,7 +1,30 @@
 import os
+
 import requests
 from selenium import webdriver
-from selenium.webdriver.firefox.service import Service
+
+
+class DriverWrapper:
+
+    def __init__(self):
+        self.__driver = None
+
+    def __del__(self):
+        if self.__driver:
+            self.__driver.close()
+
+    @property
+    def driver(self):
+        if not self.__driver:
+            self.__driver = build_driver()
+        return self.__driver
+
+
+driver_wrapper = DriverWrapper()
+
+
+def get_driver():
+    return driver_wrapper.driver
 
 
 def hijack_cookies(driver):
@@ -19,7 +42,7 @@ def hijack_cookies(driver):
     return s
 
 
-def get_driver():
+def build_driver():
     # os.environ['MOZ_HEADLESS'] = '1'
     firefox_loc = r"C:\Program Files\Mozilla Firefox\firefox.exe"
     # service = Service(executable_path=firefox_loc)
@@ -29,7 +52,7 @@ def get_driver():
     return webdriver.Firefox(options=options)
 
 
-def get_driver_opera(opera_exe_location, opera_preferences_location):
+def build_driver_opera(opera_exe_location, opera_preferences_location):
     # use custom preferences file to change the download folder
     from selenium.webdriver.opera.options import Options
     opera_options = Options()
