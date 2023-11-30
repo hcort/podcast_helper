@@ -1,10 +1,11 @@
+import json
 import os
 import time
 from urllib.parse import urlparse
 import requests
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
-from selenium.webdriver import Keys
+from import_selenium_cond import Keys
 from selenium.webdriver.common.by import By
 from slugify import slugify
 from tqdm import tqdm
@@ -94,27 +95,22 @@ def get_substack_episode(output_path, episode_url):
         if not mp3_url:
             print(f'Error reading {episode_url}: No audio found.')
             return
-        elements = driver.find_elements(By.CLASS_NAME, 'navbar-title-link')
-        podcast_name = elements[0].text if (len(elements) > 0) else url_parsed.netloc.split('.')[0]
-        podcast_url = elements[0].get_attribute('href') if (len(elements) > 0) else ''
-        elements = driver.find_elements(By.XPATH, '/html/body/div[1]/div[1]/div[2]/div/div[1]/div/article/div['
-                                                  '2]/div/div[1]/div[2]/h1')
-        episode_title = elements[0].text if (len(elements) > 0) else url_parsed.path.split('/')[-1]
-        elements = driver.find_elements(By.CLASS_NAME, 'tw-object-cover')
-        podcast_picture = elements[0].get_attribute("src") if (len(elements) > 0) else ''
+
+        json_str = driver.find_element(By.CSS_SELECTOR, 'div#main script:nth-of-type(2)').get_attribute('innerHTML')
+        json_data = json.loads(json_str)
+        episode_title = json_data['headline']
+        episode_description = json_data['description']
+        podcast_name = json_data['publisher']['name']
+        podcast_url = json_data['publisher']['url']
+        podcast_author = json_data['author'][0]['name']
+        episode_date = json_data['datePublished'][:10]
+        podcast_picture = json_data['author'][0]['image']['thumbnailUrl']
         picture_extension = podcast_picture.split('.')[-1]
-        elements = driver.find_elements(By.XPATH, '/html/body/div[1]/div[1]/div[2]/div/div[1]/div/article/div['
-                                                  '2]/div/div[5]/div/div/div[2]/div/div')
-        podcast_author = elements[0].text if (len(elements) > 0) else podcast_name
-        elements = driver.find_elements(By.CLASS_NAME, 'available-content')
-        episode_description = elements[0].text
-        elements = driver.find_elements(By.XPATH, '/html/body/div[1]/div[1]/div[2]/div/div[1]/div/article/div['
-                                                  '2]/div/div[2]/div[1]/div/div/time')
-        episode_date = elements[0].get_attribute('datetime')[:10] if (len(elements) > 0) else ''
+
         if podcast_name and episode_date and episode_title:
             mp3_name = slugify(f'{podcast_name} - {episode_date} - {episode_title}')
         else:
-            mp3_name = {mp3_url.split('/')[-2]}
+            mp3_name = mp3_url.split('/')[-2]
         if mp3_url and not os.path.exists(os.path.join(output_path, mp3_name + '.mp3')):
             mp3_filename = download_file(output_path, mp3_url, mp3_name + '.mp3')
             art_filename = download_file(output_path, podcast_picture, f'{mp3_name}.{picture_extension}')
