@@ -46,14 +46,20 @@ def list_episodes(driver=None, start_url='', prev_page='', page_no=1, use_proxy=
         WebDriverWait(driver, timeout).until(next_page_present)
         all_titles_p = driver.find_elements(By.CLASS_NAME, "title-wrapper.text-ellipsis-multiple")
         all_description_buttons = driver.find_elements(By.CLASS_NAME, "btn.btn-link.info")
-        for i, (title, button, short_description) in enumerate(zip(all_titles_p, all_description_buttons)):
+        all_short_descriptions = driver.find_elements(By.CLASS_NAME, "audio-description")
+        for i, (title, button, short_description) in enumerate(zip(all_titles_p, all_description_buttons, all_short_descriptions)):
             link = title.find_element(By.TAG_NAME, 'a').get_attribute('href')
-            button.click()
-            element_present = expected_conditions.presence_of_element_located((By.CLASS_NAME, "popover-content"))
-            WebDriverWait(driver, timeout).until(element_present)
-            description = driver.find_element(By.CLASS_NAME, "popover-content").text
-            button.click()
-            WebDriverWait(driver, timeout).until_not(element_present)
+            description = short_description.text
+            try:
+                button.click()
+                element_present = expected_conditions.presence_of_element_located((By.CLASS_NAME, "popover-content"))
+                WebDriverWait(driver, timeout).until(element_present)
+                description = driver.find_element(By.CLASS_NAME, "popover-content").text
+                # button.click()
+                driver.find_element(By.TAG_NAME, 'body').click()
+                WebDriverWait(driver, timeout).until_not(element_present)
+            except Exception as err:
+                print(f'Error clicking description: {err}')
             episodes_in_page['episode_list'].append({'url': link, 'desc': description})
         next_page_button = driver.find_elements(By.LINK_TEXT, '»')
         episodes_in_page['next_page'] = next_page_button[0].get_attribute('href') if next_page_button else ''
@@ -136,11 +142,8 @@ def list_episodes_via_proxy(driver=None, start_url='', prev_page='', page_no=1):
     return episodes_in_page
 
 
-def get_ivoox_episode_list(recycled_driver, podcast_url, use_proxy=False):
-    driver = recycled_driver if recycled_driver else get_driver()
-    episodes_in_page = list_episodes(driver=driver, start_url=podcast_url, prev_page='', page_no=1, use_proxy=use_proxy)
-    if not recycled_driver:
-        driver.close()
+def get_ivoox_episode_list(podcast_url, use_proxy=False):
+    episodes_in_page = list_episodes(driver=get_driver(), start_url=podcast_url, prev_page='', page_no=1, use_proxy=use_proxy)
     return episodes_in_page
 
 
