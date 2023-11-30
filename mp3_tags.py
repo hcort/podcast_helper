@@ -1,5 +1,6 @@
 import os
 import moviepy.editor as mp
+from mutagen import File
 from mutagen.easyid3 import EasyID3
 from mutagen.id3 import ID3, APIC
 from mutagen.mp3 import MP3
@@ -23,7 +24,7 @@ def write_cover_art(art_filename, mp3_name):
     audio = MP3(mp3_name, ID3=ID3)
     try:
         audio.add_tags()
-    except Exception as ex:
+    except Exception:
         pass
     try:
         mime = 'image/png' if art_filename.endswith('png') else 'image/jpeg'
@@ -34,11 +35,11 @@ def write_cover_art(art_filename, mp3_name):
                 encoding=3,  # 3 is for utf-8
                 mime=mime,  # image/jpeg or image/png
                 type=3,  # 3 is for the cover image
-                desc=u'Cover',
+                desc='Cover',
                 data=data
             )
         )
-    except Exception as ex:
+    except Exception:
         pass
     audio.save()
 
@@ -47,27 +48,26 @@ def write_cover_art(art_filename, mp3_name):
 def write_mp3_tags(entry_title, podcast_title, entry_date, art_filename, mp3_name):
     write_cover_art(art_filename, mp3_name)
     audio = EasyID3(mp3_name)
-    audio["title"] = entry_title
-    audio["artist"] = podcast_title
-    audio["album"] = f'Podcast {podcast_title}'
-    audio["date"] = entry_date
-    audio["genre"] = 'Podcast'
+    audio['title'] = entry_title
+    audio['artist'] = podcast_title
+    audio['album'] = f'Podcast {podcast_title}'
+    audio['date'] = entry_date
+    audio['genre'] = 'Podcast'
     audio.save()
 
 
-def write_id3_tags_dict(mp3_filename, art_filename, tag_dict={}):
-    from mutagen.id3 import ID3NoHeaderError
-    from mutagen.easyid3 import EasyID3
-    from mutagen import File
+def write_id3_tags_dict(mp3_filename, art_filename, tag_dict=None):
+    if tag_dict is None:
+        tag_dict = {}
     try:
         meta = EasyID3(mp3_filename)
-    except ID3NoHeaderError:
+    except ValueError:
         meta = File(mp3_filename, easy=True)
         meta.add_tags()
     for tag in tag_dict:
         try:
             meta[tag] = tag_dict[tag]
-        except Exception as err:
+        except ValueError as err:
             # mp3 and mp4 files have different sets of valid tags
             print(err)
     meta.save()

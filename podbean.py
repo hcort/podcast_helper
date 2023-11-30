@@ -19,14 +19,14 @@ def get_episode_cover_art(driver, output_dir, podcast_title):
     try:
         img_tag = driver.find_element(By.CSS_SELECTOR, 'div.e-logo>img')
         img_url = img_tag.get_attribute('src')
-        img_req = requests.get(img_url)
+        img_req = requests.get(img_url, timeout=30)
         img_filename = create_filename_and_folders(output_dir, podcast_title, img_url)
         ext_sep = img_filename.rfind('-', len(img_filename) - 5, len(img_filename))
         img_filename = img_filename[:ext_sep - 1] + '.' + img_filename[ext_sep + 1:]
         with open(img_filename, mode='wb') as localfile:
             localfile.write(img_req.content)
     except Exception as err:
-        print(f'Error downloading cover art - {driver.title}')
+        print(f'Error downloading cover art - {driver.title} - {err}')
         img_filename = ''
     return img_filename
 
@@ -37,7 +37,7 @@ def get_episode(driver, episode, output_dir):
     driver.get(episode)
     try:
         time.sleep(5)
-        podcast_json_data = driver.find_elements(By.TAG_NAME, 'script')[3].get_attribute("innerHTML")
+        podcast_json_data = driver.find_elements(By.TAG_NAME, 'script')[3].get_attribute('innerHTML')
         json_dict = json.loads(podcast_json_data)
         episode_title = json_dict['name']
         episode_autor = json_dict['partOfSeries']['name']
@@ -65,10 +65,12 @@ def get_episode_list(driver, podcast):
     try:
         load_more_link = driver.find_element(By.LINK_TEXT, 'Load more')
         while load_more_link:
-            driver.execute_script("arguments[0].click();", load_more_link)
+            driver.execute_script('arguments[0].click();', load_more_link)
             # when clicking "load more" a spinner appears and then disappears
-            WebDriverWait(driver, timeout).until(expected_conditions.presence_of_element_located((By.CLASS_NAME, "spinner-border")))
-            WebDriverWait(driver, timeout).until_not(expected_conditions.presence_of_element_located((By.CLASS_NAME, "spinner-border")))
+            WebDriverWait(driver, timeout).until(
+                expected_conditions.presence_of_element_located((By.CLASS_NAME, 'spinner-border')))
+            WebDriverWait(driver, timeout).until_not(
+                expected_conditions.presence_of_element_located((By.CLASS_NAME, 'spinner-border')))
             try:
                 load_more_link = driver.find_element(By.LINK_TEXT, 'Load more')
             except NoSuchElementException:

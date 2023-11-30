@@ -35,7 +35,7 @@ def download_file(output_path, link, name, show_progress=False):
     if not os.path.exists(filename):
         with open(filename, 'wb') as handle:
             try:
-                response = requests.get(link, stream=True)
+                response = requests.get(link, stream=True, timeout=100)
                 block_size = 1024 * 64
                 progress = None
                 if show_progress:
@@ -68,15 +68,15 @@ def list_all_podcasts(substack_link):
         driver.get(archive_url)
         while keep_scrolling:
             try:
-                scroll_element = driver.find_element(By.CLASS_NAME, "visibility-check")
+                # scroll_element = driver.find_element(By.CLASS_NAME, "visibility-check")
                 driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.END)
                 time.sleep(2)
-            except NoSuchElementException as err:
+            except NoSuchElementException:
                 keep_scrolling = False
         all_podcast_entries = driver.find_elements(By.CSS_SELECTOR, 'a.podcast')
         all_podcast_links = [item.get_attribute('href') for item in all_podcast_entries]
     except TimeoutException as ex:
-        print('Error accessing {}: Timeout: {}'.format(substack_link, str(ex)))
+        print(f'Error accessing {substack_link}: Timeout: {ex}')
     finally:
         driver.close()
     return all_podcast_links
@@ -89,8 +89,8 @@ def get_substack_episode(output_path, episode_url):
     try:
         # div.single-post article div div.container audio
         driver.get(episode_url)
-        elements = driver.find_elements(By.TAG_NAME, "audio")
-        mp3_url = elements[0].get_attribute("src") if (len(elements) > 0) else ''
+        elements = driver.find_elements(By.TAG_NAME, 'audio')
+        mp3_url = elements[0].get_attribute('src') if (len(elements) > 0) else ''
         if not mp3_url:
             print(f'Error reading {episode_url}: No audio found.')
             return
@@ -101,7 +101,7 @@ def get_substack_episode(output_path, episode_url):
                                                   '2]/div/div[1]/div[2]/h1')
         episode_title = elements[0].text if (len(elements) > 0) else url_parsed.path.split('/')[-1]
         elements = driver.find_elements(By.CLASS_NAME, 'tw-object-cover')
-        podcast_picture = elements[0].get_attribute("src") if (len(elements) > 0) else ''
+        podcast_picture = elements[0].get_attribute('src') if (len(elements) > 0) else ''
         picture_extension = podcast_picture.split('.')[-1]
         elements = driver.find_elements(By.XPATH, '/html/body/div[1]/div[1]/div[2]/div/div[1]/div/article/div['
                                                   '2]/div/div[5]/div/div/div[2]/div/div')
@@ -130,8 +130,8 @@ def get_substack_episode(output_path, episode_url):
             }
             write_id3_tags_dict(mp3_filename, art_filename, tag_dict)
     except TimeoutException as ex:
-        print('Error accessing {}: Timeout: {}'.format(episode_url, str(ex)))
+        print(f'Error accessing {episode_url}: Timeout: {str(ex)}')
     except Exception as ex:
-        print('Error accessing {}: Exception: {}'.format(episode_url, str(ex)))
+        print(f'Error accessing {episode_url}: Exception: {str(ex)}')
     finally:
         driver.close()

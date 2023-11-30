@@ -52,11 +52,13 @@ def parse_index(index_url, output_path):
     serie_title = ''
     while next_url:
         try:
-            response = requests.get(next_url, headers={"Accept-Language": "es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3"})
+            response = requests.get(next_url,
+                                    headers={'Accept-Language': 'es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3'},
+                                    timeout=100)
             if not response.ok:
                 print(f'Error getting index: {next_url}')
                 break
-            soup = BeautifulSoup(response.text, features="html.parser")
+            soup = BeautifulSoup(response.text, features='html.parser')
             if not serie_title:
                 serie_title = soup.select_one('h1.title-for-crumbs').text[7:]
             all_video_urls += soup.select('div.title>a')
@@ -134,8 +136,8 @@ def get_upv_episode(output_path, episode_link):
             'genre': 'Podcast'
         }
         WebDriverWait(driver, timeout).until(
-            expected_conditions.presence_of_element_located((By.ID, "paellaiframe")))
-        driver.switch_to.frame("paellaiframe")
+            expected_conditions.presence_of_element_located((By.ID, 'paellaiframe')))
+        driver.switch_to.frame('paellaiframe')
         WebDriverWait(driver, timeout).until(
             expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'div#masterVideoWrapper>video>source')))
         video = driver.find_element(By.CSS_SELECTOR, 'div#masterVideoWrapper>video>source').get_attribute('src')
@@ -151,7 +153,7 @@ def get_upv_episode(output_path, episode_link):
 
 
 # Lanzamos la función principal
-if __name__ == "__main__":
+if __name__ == '__main__':
     all_series_url = [
         # I International Conference on the Inklings: Fantasy and National Discourse
         'https://ehutb.ehu.eus/series/58c66f50f82b2b70058b456b',

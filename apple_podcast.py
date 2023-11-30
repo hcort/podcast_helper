@@ -1,3 +1,8 @@
+"""
+    All the data I need from an episode is inside a JSON string in the HTML
+
+    I can get the mp3 file using Requests, no need to download using Selenium
+"""
 import json
 
 from selenium.webdriver.common.by import By
@@ -6,13 +11,15 @@ from get_driver import get_driver, hijack_cookies
 from get_episode import create_filename_and_folders
 from mp3_tags import write_mp3_tags
 
+podcast_json_id = 'shoebox-media-api-cache-amp-podcasts'
+
 
 def get_episode(driver, episode, output_dir):
     if not episode or not driver:
         return None
     driver.get(episode)
     try:
-        podcast_json_data = driver.find_element(By.ID, 'shoebox-media-api-cache-amp-podcasts').get_attribute("innerHTML")
+        podcast_json_data = driver.find_element(By.ID, podcast_json_id).get_attribute('innerHTML')
         json_dict = json.loads(podcast_json_data)
         json_dict = json.loads(json_dict[list(json_dict.keys())[0]])
         episode_title = json_dict['d'][0]['attributes']['name']

@@ -1,3 +1,9 @@
+"""
+    Main entry point
+
+    In main method we can build a list of podcast episodes to download,
+    and they will be processed one by one
+"""
 from apple_podcast import get_apple_podcast_episode
 from episode_list import get_ivoox_episode_list
 from get_episode import get_ivoox_episode
@@ -8,19 +14,20 @@ from podbean import get_podbean_episode, get_podbean_episode_list
 output_path_def = './output'
 
 
-def episode_download(episode_list=[]):
-    use_proxy = False
-    for link in episode_list:
-        if link.find('youtube') != -1:
-            get_youtube_episode(output_path=output_path_def, episode_url=link)
-        elif link.find('ivoox') != -1:
-            get_ivoox_episode(output_path=output_path_def, episode_url=link, use_proxy=use_proxy)
-        elif link.find('substack') != -1:
-            get_substack_episode(output_path=output_path_def, episode_url=link)
-        elif link.find('podbean') != -1:
-            get_podbean_episode(output_path=output_path_def, episode_url=link)
-        elif link.find('apple.com') != -1:
-            get_apple_podcast_episode(output_path=output_path_def, episode_url=link)
+def episode_download(episode_list=None) -> None:
+    if episode_list is not None:
+        use_proxy = False
+        for link in episode_list:
+            if link.find('youtube') != -1:
+                get_youtube_episode(output_path=output_path_def, episode_url=link)
+            elif link.find('ivoox') != -1:
+                get_ivoox_episode(output_path=output_path_def, episode_url=link, use_web_proxy=use_proxy)
+            elif link.find('substack') != -1:
+                get_substack_episode(output_path=output_path_def, episode_url=link)
+            elif link.find('podbean') != -1:
+                get_podbean_episode(output_path=output_path_def, episode_url=link)
+            elif link.find('apple.com') != -1:
+                get_apple_podcast_episode(output_path=output_path_def, episode_url=link)
 
 
 def episode_listing():
@@ -33,7 +40,7 @@ def episode_listing():
         # if link.find('youtube') != -1:
         #     get_youtube_episode(output_path=output_path_def, episode_url=link)
         if link.find('ivoox') != -1:
-            episode_list = get_ivoox_episode_list(recycled_driver=None, podcast_url=link, use_proxy=use_proxy)
+            episode_list = get_ivoox_episode_list(recycled_driver=None, podcast_url=link, use_web_proxy=use_proxy)
         # elif link.find('substack') != -1:
         #     get_substack_episode(output_path=output_path_def, episode_url=link)
         elif link.find('podbean'):
