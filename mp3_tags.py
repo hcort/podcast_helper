@@ -39,7 +39,7 @@ def write_cover_art(art_filename, mp3_name):
             )
         )
     except Exception as ex:
-        pass
+        print(f'Can\'t save cover image: {ex}')
     audio.save()
 
 

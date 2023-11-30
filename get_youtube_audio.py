@@ -1,6 +1,6 @@
 import pytube as pytube
 import requests
-from mp3_tags import write_id3_tags_dict
+from mp3_tags import write_id3_tags_dict, mp4_to_mp3
 
 
 def save_image_from_url(thumbnail_url, output_path, nombre):
@@ -45,7 +45,7 @@ def youtube_to_mp3(output_path, url):
         extension = stream.default_filename[-3:]
         stream.download(output_path=output_path, filename=f'{nombre}.{extension}')
         cover_image_filename = save_image_from_url(yt.thumbnail_url, output_path, nombre)
-        mp3_filename = mp4_to_mp3(output_path, nombre, extension)
+        mp3_filename = mp4_to_mp3(output_path, nombre, extension, delete_mp4=True)
         write_id3_tags_dict(mp3_filename, cover_image_filename, tag_dict)
     except pytube.exceptions.RegexMatchError:
         print("URL no encontrada")

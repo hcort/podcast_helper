@@ -30,8 +30,5 @@ def get_episode(driver, episode, output_dir):
         print(f'{episode} - {driver.title} - {err}')
 
 
-def get_apple_podcast_episode(output_path, episode_url, recycled_driver=None):
-    driver = recycled_driver if recycled_driver else get_driver()
-    get_episode(driver=driver, episode=episode_url, output_dir=output_path)
-    if not recycled_driver:
-        driver.close()
+def get_apple_podcast_episode(output_path, episode_url):
+    get_episode(driver=get_driver(), episode=episode_url, output_dir=output_path)
