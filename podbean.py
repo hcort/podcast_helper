@@ -82,16 +82,10 @@ def get_episode_list(driver, podcast):
     return episode_list
 
 
-def get_podbean_episode(output_path, episode_url, recycled_driver=None):
-    driver = recycled_driver if recycled_driver else get_driver()
-    get_episode(driver=driver, episode=episode_url, output_dir=output_path)
-    if not recycled_driver:
-        driver.close()
+def get_podbean_episode(output_path, episode_url):
+    get_episode(driver=get_driver(), episode=episode_url, output_dir=output_path)
 
 
-def get_podbean_episode_list(base_url, recycled_driver=None):
-    driver = recycled_driver if recycled_driver else get_driver()
-    episode_list = get_episode_list(driver=driver, podcast=base_url)
-    if not recycled_driver:
-        driver.close()
+def get_podbean_episode_list(base_url):
+    episode_list = get_episode_list(driver=get_driver(), podcast=base_url)
     return episode_list

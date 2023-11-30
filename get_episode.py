@@ -72,6 +72,17 @@ def get_episode_cover_art(webdriver, output_dir, podcast_title):
     return img_filename
 
 
+def remove_promo_popup(driver):
+    timeout = 5
+    promo_layer = EC.presence_of_element_located((By.ID, "promo-starter"))
+    WebDriverWait(driver, timeout).until(promo_layer)
+    promo_layer = driver.find_element(By.ID, "promo-starter")
+    driver.execute_script("""var element = arguments[0];
+                element.innerHTML = '';""", promo_layer)
+    promo_layer.click()
+    time.sleep(5)
+
+
 def get_episode(driver=None, episode='', output_dir='', use_web_proxy=False):
     timeout = 5
     if not episode or not driver:
@@ -86,6 +97,8 @@ def get_episode(driver=None, episode='', output_dir='', use_web_proxy=False):
         driver.get(episode)
     wait_for_cookies(driver, timeout=10, url=episode)
     try:
+        remove_promo_popup(driver)
+
         podcast_title = driver.find_element(By.CLASS_NAME, 'normal').get_attribute('title')
         podcast_date = driver.find_element(By.CLASS_NAME, 'icon-date').text
         episode_title = driver.find_element(By.TAG_NAME, 'h1').text
@@ -97,10 +110,10 @@ def get_episode(driver=None, episode='', output_dir='', use_web_proxy=False):
         mp3_filename_end = redirected.url.find('.mp3')
         mp3_filename_start = redirected.url.rfind('/', 0, mp3_filename_end)
         mp3_filename = redirected.url[mp3_filename_start+1:mp3_filename_end+4]
-        mp3_filename = create_filename_and_folders(output_dir, podcast_title, episode_title) + '.mp3'
+        mp3_filename = create_filename_and_folders(output_dir, slugify(podcast_title), episode_title) + '.mp3'
         with open(mp3_filename, mode='wb') as localfile:
             localfile.write(redirected.content)
-        image_filename = get_episode_cover_art(driver, output_dir, podcast_title)
+        image_filename = get_episode_cover_art(driver, output_dir, slugify(podcast_title))
         write_mp3_tags(episode_title, podcast_title, podcast_date, image_filename, mp3_filename)
     except TimeoutException as ex:
         # cookies already accepted
@@ -179,15 +192,9 @@ def get_all_episodes(driver=None, episode_list=None):
         get_episode(driver, episode)
 
 
-def get_ivoox_episode(output_path, episode_url, recycled_driver=None, use_web_proxy=False):
-    driver = recycled_driver if recycled_driver else get_driver()
-    get_episode(driver=driver, episode=episode_url, output_dir=output_path, use_web_proxy=use_web_proxy)
-    if not recycled_driver:
-        driver.close()
+def get_ivoox_episode(output_path, episode_url, use_proxy=False):
+    get_episode(driver=get_driver(), episode=episode_url, output_dir=output_path, use_proxy=use_proxy)
 
 
-def get_ivoox_episode_opera(output_path, episode_url, recycled_driver=None):
-    driver = recycled_driver if recycled_driver else get_driver()
-    get_episode_opera_vpn(driver=driver, episode=episode_url, output_dir=output_path)
-    if not recycled_driver:
-        driver.close()
+def get_ivoox_episode_opera(output_path, episode_url, use_proxy=False):
+    get_episode_opera_vpn(driver=get_driver(), episode=episode_url, output_dir=output_path, use_proxy=use_proxy)

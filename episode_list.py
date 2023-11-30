@@ -1,7 +1,3 @@
-"""
-    List episode from the home page of a podcast
-
-"""
 # from selenium.common import TimeoutException
 # from selenium.webdriver import Keys
 from selenium.common.exceptions import TimeoutException
@@ -48,20 +44,26 @@ def list_episodes(webdriver=None, start_url=None, prev_page='', page_no=1, use_w
     wait_for_cookies(webdriver, timeout, start_url)
     try:
         next_page_present = expected_conditions.presence_of_element_located(
-            (By.CLASS_NAME, 'title-wrapper.text-ellipsis-multiple'))
-        WebDriverWait(webdriver, timeout).until(next_page_present)
-        all_titles_p = webdriver.find_elements(By.CLASS_NAME, 'title-wrapper.text-ellipsis-multiple')
-        all_description_buttons = webdriver.find_elements(By.CLASS_NAME, 'btn.btn-link.info')
-        for (title, button) in zip(all_titles_p, all_description_buttons):
-            episode_url = title.find_element(By.TAG_NAME, 'a').get_attribute('href')
-            button.click()
-            element_present = expected_conditions.presence_of_element_located((By.CLASS_NAME, 'popover-content'))
-            WebDriverWait(webdriver, timeout).until(element_present)
-            description = webdriver.find_element(By.CLASS_NAME, 'popover-content').text
-            button.click()
-            WebDriverWait(webdriver, timeout).until_not(element_present)
-            episodes_in_page['episode_list'].append({'url': episode_url, 'desc': description})
-        next_page_button = webdriver.find_elements(By.LINK_TEXT, '»')
+            (By.CLASS_NAME, "title-wrapper.text-ellipsis-multiple"))
+        WebDriverWait(driver, timeout).until(next_page_present)
+        all_titles_p = driver.find_elements(By.CLASS_NAME, "title-wrapper.text-ellipsis-multiple")
+        all_description_buttons = driver.find_elements(By.CLASS_NAME, "btn.btn-link.info")
+        all_short_descriptions = driver.find_elements(By.CLASS_NAME, "audio-description")
+        for i, (title, button, short_description) in enumerate(zip(all_titles_p, all_description_buttons, all_short_descriptions)):
+            link = title.find_element(By.TAG_NAME, 'a').get_attribute('href')
+            description = short_description.text
+            try:
+                button.click()
+                element_present = expected_conditions.presence_of_element_located((By.CLASS_NAME, "popover-content"))
+                WebDriverWait(driver, timeout).until(element_present)
+                description = driver.find_element(By.CLASS_NAME, "popover-content").text
+                # button.click()
+                driver.find_element(By.TAG_NAME, 'body').click()
+                WebDriverWait(driver, timeout).until_not(element_present)
+            except Exception as err:
+                print(f'Error clicking description: {err}')
+            episodes_in_page['episode_list'].append({'url': link, 'desc': description})
+        next_page_button = driver.find_elements(By.LINK_TEXT, '»')
         episodes_in_page['next_page'] = next_page_button[0].get_attribute('href') if next_page_button else ''
     except TimeoutException as ex:
         print(f'Error accessing {webdriver.current_url}: Timeout: {str(ex)}')
@@ -142,22 +144,16 @@ def list_episodes_via_proxy(webdriver=None, start_url='', prev_page='', page_no=
     return episodes_in_page
 
 
-def get_ivoox_episode_list(recycled_driver, podcast_url, use_web_proxy=False):
-    webdriver = recycled_driver if recycled_driver else get_driver()
-    episodes_in_page = list_episodes(webdriver=webdriver,
-                                     start_url=podcast_url, prev_page='', page_no=1, use_web_proxy=use_web_proxy)
-    if not recycled_driver:
-        webdriver.close()
+def get_ivoox_episode_list(podcast_url, use_proxy=False):
+    episodes_in_page = list_episodes(driver=get_driver(), start_url=podcast_url, prev_page='', page_no=1, use_proxy=use_proxy)
     return episodes_in_page
 
 
 if __name__ == '__main__':
-    use_proxy = False
+    use_proxy = True
     links = [
-        'https://www.ivoox.com/podcast-enano-blanco-30_sq_f11879935_1.html'
              ]
-    episode_list_driver = get_driver()
+    driver = get_driver()
     for link in links:
-        episodes_found = list_episodes(
-            webdriver=episode_list_driver, start_url=link, prev_page='', page_no=1, use_web_proxy=use_proxy)
+        episodes_in_page = list_episodes(driver=driver, start_url=link, prev_page='', page_no=1, use_proxy=use_proxy)
     pass

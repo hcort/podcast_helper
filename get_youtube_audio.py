@@ -8,6 +8,7 @@ from mp3_tags import mp4_to_mp3, write_id3_tags_dict
 
 
 def save_image_from_url(thumbnail_url, output_path, nombre):
+    import os
     image_path = os.path.join(output_path, f'{nombre}.jpg')
     if not os.path.exists(image_path):
         with open(image_path, 'wb') as handle:
@@ -43,12 +44,13 @@ def youtube_to_mp3(output_path, url):
             # 'description': f'{url}\n{yt.channel_url}\n{yt.description}',
             'genre': 'Podcast'
         }
+        from slugify import slugify
         nombre = slugify(stream.default_filename[:-4])
         extension = stream.default_filename[-3:]
         stream.download(output_path=output_path, filename=f'{nombre}.{extension}')
         cover_image_filename = save_image_from_url(yt.thumbnail_url, output_path, nombre)
-        mp3_filename = mp4_to_mp3(output_path, nombre, extension)
-        write_id3_tags_dict(mp3_filename=mp3_filename, art_filename=cover_image_filename, tag_dict=tag_dict)
+        mp3_filename = mp4_to_mp3(output_path, nombre, extension, delete_mp4=True)
+        write_id3_tags_dict(mp3_filename, cover_image_filename, tag_dict)
     except pytube.exceptions.RegexMatchError:
         print('URL no encontrada')
     except Exception as err:
@@ -100,39 +102,8 @@ def youtube_download_video(output_path, url, index=0):
     except pytube.exceptions.RegexMatchError:
         print('URL no encontrada')
     except Exception as err:
-        print(f'Unexpected {err}, {type(err)}')
-    except BaseException as err:
-        print(f'Unexpected {err}, {type(err)}')
+        print(f"Unexpected {err}, {type(err)}")
 
 
 def get_youtube_episode(output_path, episode_url):
     youtube_to_mp3(output_path=output_path, url=episode_url)
-
-
-if __name__ == '__main__':
-    # use_proxy = True
-    # playlists = [
-    #     # Star Wars Galaxy of Creatures
-    #     # 'https://www.youtube.com/playlist?list=PLFKE9xs3qYF1T5s5ZSbGsqCwGGK1Wf9A-',
-    #     # Star Wars: Galactic Pals
-    #     # 'https://www.youtube.com/playlist?list=PLe4ZuWFax2d-t9CPKhlFeY7Y2eVRkfXN3',
-    #     # Star Wars. Galaxy of Adventures
-    #     'https://www.youtube.com/playlist?list=PLxs2QjD3UrE9xn1ConOtkJM6-inLYEBTT',
-    #          ]
-    # for playlist in playlists:
-    #     all_videos = list_videos_from_playlist(playlist)
-    #     for index, link in enumerate(all_videos):
-    #         if index == 29:
-    #             youtube_download_video('./output', link, index)
-    # videos = [
-    #     'https://www.youtube.com/watch?v=sDrkc6-_sjo',
-    #     'https://www.youtube.com/watch?v=_l8jzFCqryg',
-    #     'https://www.youtube.com/watch?v=LURnxaiFE2c'
-    # ]
-    # for video in videos:
-    #     get_youtube_episode('./output', video)
-    playlist = 'https://www.youtube.com/playlist?list=PLsQ0j1uzt5dZW12ILjb-8E0s2vw_XJtvj'
-    playlist_folder = create_output_folder_playlist(playlist, './output')
-    playlist_videos = list_videos_from_playlist(playlist)
-    for video in playlist_videos:
-        get_youtube_episode(playlist_folder, video)
