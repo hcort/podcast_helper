@@ -1,3 +1,9 @@
+"""
+    By importing all the files where I have a class that implements AbstractPodcast
+    they are registered by the __init_subclass__ call
+"""
+# pylint: disable=unused-import
+
 from abstract_podcast import AbstractPodcastList
 import apple_podcast
 import get_substack_audio

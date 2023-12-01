@@ -2,10 +2,22 @@
     Abstract representation of a podcast wrapper
 
     All podcast downloaders must implement this interface
+
+    All classes that implement this interface are registered in the subclasses list.
+    This list is used to create a list with an instance of every
+    podcast downloader that has been registered
 """
 
 
 class AbstractPodcast:
+    """
+        The podcast interface.
+
+        All podcast downloaders must implement it
+
+        We use the subclasses and __init_subclass__ registration method
+        to keep track of all the different podcast downloaders created
+    """
     subclasses = []
 
     def __init_subclass__(cls, **kwargs):
@@ -26,6 +38,13 @@ class AbstractPodcast:
 
 
 class AbstractPodcastList:
+    """
+        It holds a list of all the classes that implement the AbstractPodcast
+        interface.
+
+        get_podcast_for_url returns the proper podcast downloader from the
+        registered podcast downloaders
+    """
 
     def __init__(self, output_path):
         self.__registered_podcasts = []

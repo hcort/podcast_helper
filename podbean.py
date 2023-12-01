@@ -18,6 +18,9 @@ from mp3_tags import write_mp3_tags
 
 
 class PodbeanPodcast(AbstractPodcast):
+    """
+        Implements AbstractPodcast for the podbean platform
+    """
 
     def __init__(self, output_path=None):
         self.__output_path = output_path
@@ -51,11 +54,11 @@ def get_episode_cover_art(driver, output_dir, podcast_title):
     return img_filename
 
 
-def get_episode(episode, output_dir):
+def get_episode(episode_url, output_path):
     driver = get_driver()
-    if not episode or not driver:
+    if not episode_url or not driver:
         return None
-    driver.get(episode)
+    driver.get(episode_url)
     try:
         time.sleep(5)
         podcast_json_data = driver.find_elements(By.TAG_NAME, 'script')[3].get_attribute('innerHTML')
@@ -65,16 +68,16 @@ def get_episode(episode, output_dir):
         # episode_description = json_dict['description']
         episode_date = json_dict['datePublished']
         episode_mp3_url = json_dict['associatedMedia']['contentUrl']
-        image_filename = get_episode_cover_art(driver, output_dir, episode_autor)
+        image_filename = get_episode_cover_art(driver, output_path, episode_autor)
         # download file using requests
         requests_session = hijack_cookies(driver)
         redirected = requests_session.get(episode_mp3_url)
-        mp3_filename = create_filename_and_folders(output_dir, episode_autor, episode_title) + '.mp3'
+        mp3_filename = create_filename_and_folders(output_path, episode_autor, episode_title) + '.mp3'
         with open(mp3_filename, mode='wb') as localfile:
             localfile.write(redirected.content)
         write_mp3_tags(episode_title, episode_autor, episode_date, image_filename, mp3_filename)
     except Exception as err:
-        print(f'{episode} - {driver.title} - {err}')
+        print(f'{episode_url} - {driver.title} - {err}')
 
 
 def get_episode_list(podcast):

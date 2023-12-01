@@ -16,8 +16,6 @@ from urllib.parse import urlparse
 import requests
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from slugify import slugify
@@ -30,6 +28,9 @@ from utils import create_filename_and_folders
 
 
 class IvooxPodcast(AbstractPodcast):
+    """
+        implements AbstractPodcast for ivoox
+    """
 
     def __init__(self, output_path=None):
         self.__output_path = output_path
@@ -49,7 +50,7 @@ class IvooxPodcast(AbstractPodcast):
 
 def wait_for_cookies(webdriver_waiting_for_cookies, timeout, url):
     try:
-        cookie_button_present = expected_conditions.presence_of_element_located((By.ID, 'didomi-notice-agree-button'))
+        cookie_button_present = EC.presence_of_element_located((By.ID, 'didomi-notice-agree-button'))
         WebDriverWait(webdriver_waiting_for_cookies, timeout).until(cookie_button_present)
         cookie_button = webdriver_waiting_for_cookies.find_element(By.ID, 'didomi-notice-agree-button')
         cookie_button.click()
@@ -90,20 +91,23 @@ def list_episodes(start_url=None, prev_page='', page_no=1):
     webdriver.get(start_url)
     wait_for_cookies(webdriver, timeout, start_url)
     try:
-        next_page_present = expected_conditions.presence_of_element_located(
-            (By.CLASS_NAME, "title-wrapper"))
+        next_page_present = EC.presence_of_element_located(
+            (By.CLASS_NAME, 'title-wrapper'))
         WebDriverWait(webdriver, timeout).until(next_page_present)
-        all_titles_p = webdriver.find_elements(By.CLASS_NAME, "title-wrapper")
-        all_description_buttons = webdriver.find_elements(By.CLASS_NAME, "btn.btn-link.info")
-        all_short_descriptions = webdriver.find_elements(By.CLASS_NAME, "audio-description")
-        for i, (title, button, short_description) in enumerate(zip(all_titles_p, all_description_buttons, all_short_descriptions)):
+        all_titles_p = webdriver.find_elements(By.CLASS_NAME, 'title-wrapper')
+        all_description_buttons = webdriver.find_elements(By.CLASS_NAME, 'btn.btn-link.info')
+        all_short_descriptions = webdriver.find_elements(By.CLASS_NAME, 'audio-description')
+        for _, (title, button, short_description) in enumerate(zip(
+                all_titles_p,
+                all_description_buttons,
+                all_short_descriptions)):
             link = title.find_element(By.TAG_NAME, 'a').get_attribute('href')
             description = short_description.text
             try:
                 button.click()
-                element_present = expected_conditions.presence_of_element_located((By.CLASS_NAME, "popover-content"))
+                element_present = EC.presence_of_element_located((By.CLASS_NAME, 'popover-content'))
                 WebDriverWait(webdriver, timeout).until(element_present)
-                description = webdriver.find_element(By.CLASS_NAME, "popover-content").text
+                description = webdriver.find_element(By.CLASS_NAME, 'popover-content').text
                 # button.click()
                 webdriver.find_element(By.TAG_NAME, 'body').click()
                 WebDriverWait(webdriver, timeout).until_not(element_present)
@@ -154,9 +158,9 @@ def get_episode_cover_art(webdriver, output_dir, podcast_title):
 def remove_promo_popup(driver):
     timeout = 5
     try:
-        promo_layer = EC.presence_of_element_located((By.ID, "promo-starter"))
+        promo_layer = EC.presence_of_element_located((By.ID, 'promo-starter'))
         WebDriverWait(driver, timeout).until(promo_layer)
-        promo_layer = driver.find_element(By.ID, "promo-starter")
+        promo_layer = driver.find_element(By.ID, 'promo-starter')
         driver.execute_script("""var element = arguments[0];
                     element.innerHTML = '';""", promo_layer)
         promo_layer.click()

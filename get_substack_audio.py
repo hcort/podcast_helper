@@ -1,21 +1,26 @@
+"""
+    Used to download podcasts from substack
+"""
+import json
 import os
 import time
 from urllib.parse import urlparse
+
 import requests
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.webdriver.common.by import By
+from slugify import slugify
 
 from abstract_podcast import AbstractPodcast
 from import_selenium_cond import Keys
-from selenium.webdriver.common.by import By
-from slugify import slugify
-from tqdm import tqdm
-import json
-
 from mp3_tags import write_id3_tags_dict
 
 
 class SubstackPodcast(AbstractPodcast):
+    """
+        Implements AbstractPodcast interface for podcasts hosted in the substack platform
+    """
 
     def __init__(self, output_path=None):
         self.__output_path = output_path
@@ -33,49 +38,23 @@ class SubstackPodcast(AbstractPodcast):
         self.__output_path = output_path
 
 
-class ProgressVisorTQDM:
-    def __init__(self, message: str):
-        self.total_iterations = 0
-        self.__tqdm_progress = tqdm(position=0, leave=True, desc=message)
-
-    @property
-    def total(self):
-        return self.total_iterations
-
-    @total.setter
-    def total(self, total_iterations):
-        self.total_iterations = total_iterations
-        self.__tqdm_progress.total = total_iterations
-
-    def update(self):
-        self.__tqdm_progress.update()
-
-
-def download_file(output_path, link, name, show_progress=False):
+def download_file(output_path, link, name):
     filename = os.path.join(output_path, name)
     if not os.path.exists(filename):
         with open(filename, 'wb') as handle:
             try:
                 response = requests.get(link, stream=True, timeout=100)
                 block_size = 1024 * 64
-                progress = None
-                if show_progress:
-                    progress = ProgressVisorTQDM(f'Downloading\n{link} -> {filename}\n')
-                    progress.total = int(response.headers.get('content-length')) // block_size
                 if not response.ok:
                     print('Error getting file: ' + link)
                 for block in response.iter_content(block_size):
                     if not block:
                         break
                     handle.write(block)
-                    if progress:
-                        progress.update()
             except ConnectionError as err:
-                print('Error getting file: ' + link)
-                print(err)
+                print(f'Error getting file: {link} - {err}')
             except Exception as err:
-                print('Error getting file: ' + link)
-                print(err)
+                print(f'Error getting file: {link} - {err}')
     return filename
 
 
@@ -110,8 +89,8 @@ def get_substack_episode(output_path, episode_url):
     try:
         # div.single-post article div div.container audio
         driver.get(episode_url)
-        elements = driver.find_elements(By.TAG_NAME, "audio")
-        mp3_url = elements[0].get_attribute("src") if (len(elements) > 0) else ''
+        elements = driver.find_elements(By.TAG_NAME, 'audio')
+        mp3_url = elements[0].get_attribute('src') if (len(elements) > 0) else ''
         if not mp3_url:
             print(f'Error reading {episode_url}: No audio found.')
             return

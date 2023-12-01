@@ -1,3 +1,6 @@
+"""
+    Used to download podcasts from Apple podcast
+"""
 import json
 import time
 from urllib.parse import urlparse
@@ -15,6 +18,9 @@ podcast_json_id = 'shoebox-media-api-cache-amp-podcasts'
 
 
 class ApplePodcast(AbstractPodcast):
+    """
+        Implements AbstractPodcast interface for podcasts hosted in the Apple platform
+    """
 
     def __init__(self, output_path=None):
         self.__output_path = output_path
@@ -45,7 +51,7 @@ def get_all_episodes(start_url):
                 # scroll_element = driver.find_element(By.CLASS_NAME, "visibility-check")
                 try:
                     more_episodes_button_presence = EC.presence_of_element_located(
-                        (By.ID, "didomi-notice-agree-button"))
+                        (By.ID, 'didomi-notice-agree-button'))
                     WebDriverWait(driver, timeout).until(more_episodes_button_presence)
                 except TimeoutException:
                     keep_scrolling = False
@@ -63,11 +69,11 @@ def get_all_episodes(start_url):
     return all_podcast_links
 
 
-def get_episode(episode, output_dir):
+def get_episode(episode_url, output_path):
     driver = get_driver()
-    if not episode or not driver:
+    if not episode_url or not driver:
         return None
-    driver.get(episode)
+    driver.get(episode_url)
     try:
         podcast_json_data = driver.find_element(By.ID, podcast_json_id).get_attribute('innerHTML')
         json_dict = json.loads(podcast_json_data)
@@ -79,10 +85,10 @@ def get_episode(episode, output_dir):
         image_filename = driver.find_element(By.CLASS_NAME, 'we-artwork__image').get_attribute('src')
         requests_session = hijack_cookies(driver)
         redirected = requests_session.get(episode_mp3_url)
-        mp3_filename = create_filename_and_folders(output_dir, episode_autor, episode_title) + '.mp3'
+        mp3_filename = create_filename_and_folders(output_path, episode_autor, episode_title) + '.mp3'
         with open(mp3_filename, mode='wb') as localfile:
             localfile.write(redirected.content)
         write_mp3_tags(episode_title, episode_autor, episode_date, image_filename, mp3_filename)
     except Exception as err:
-        print(f'{episode} - {driver.title} - {err}')
+        print(f'{episode_url} - {driver.title} - {err}')
 

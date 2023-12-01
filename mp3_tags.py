@@ -1,3 +1,6 @@
+"""
+    Methods to handle the mp3 ID3 tags
+"""
 import os
 import moviepy.editor as mp
 from mutagen import File
@@ -35,7 +38,7 @@ def write_cover_art(art_filename, mp3_name):
                 encoding=3,  # 3 is for utf-8
                 mime=mime,  # image/jpeg or image/png
                 type=3,  # 3 is for the cover image
-                desc=u'Cover',
+                desc='Cover',
                 data=data
             )
         )

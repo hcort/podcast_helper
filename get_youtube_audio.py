@@ -1,5 +1,7 @@
+"""
+    Downloads audio from a youtube video
+"""
 import os
-import urllib
 from urllib.parse import urlparse
 
 import moviepy.editor
@@ -12,6 +14,9 @@ from mp3_tags import mp4_to_mp3, write_id3_tags_dict
 
 
 class YoutubePodcast(AbstractPodcast):
+    """
+        Implements AbstractPodcast for youtube
+    """
 
     def __init__(self, output_path=None):
         self.__output_path = output_path
@@ -30,7 +35,6 @@ class YoutubePodcast(AbstractPodcast):
 
 
 def save_image_from_url(thumbnail_url, output_path, nombre):
-    import os
     image_path = os.path.join(output_path, f'{nombre}.jpg')
     if not os.path.exists(image_path):
         with open(image_path, 'wb') as handle:
@@ -51,11 +55,11 @@ def save_image_from_url(thumbnail_url, output_path, nombre):
     return image_path
 
 
-def youtube_to_mp3(output_path, url):
+def get_youtube_episode(output_path, episode_url):
     if not output_path:
         raise FileNotFoundError
     try:
-        yt = pytube.YouTube(url)
+        yt = pytube.YouTube(episode_url)
         stream = yt.streams.filter(mime_type='audio/mp4', only_audio=True).desc().first()
         tag_dict = {
             'artist': yt.author,
@@ -68,7 +72,6 @@ def youtube_to_mp3(output_path, url):
             # 'description': f'{url}\n{yt.channel_url}\n{yt.description}',
             'genre': 'Podcast'
         }
-        from slugify import slugify
         nombre = slugify(stream.default_filename[:-4])
         extension = stream.default_filename[-3:]
         stream.download(output_path=output_path, filename=f'{nombre}.{extension}')
@@ -128,5 +131,5 @@ def youtube_download_video(output_path, url, index=0):
     except pytube.exceptions.RegexMatchError:
         print('URL no encontrada')
     except Exception as err:
-        print(f"Unexpected {err}, {type(err)}")
+        print(f'Unexpected {err}, {type(err)}')
 

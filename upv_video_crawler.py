@@ -25,6 +25,9 @@ from mp3_tags import mp4_to_mp3, write_id3_tags_dict
 
 
 class UpvVideoPodcast(AbstractPodcast):
+    """
+        implements AbstractPodcast for the UPV-EHU video platform
+    """
 
     def __init__(self, output_path=None):
         self.__output_path = output_path
@@ -183,7 +186,7 @@ def parse_index(index_url, output_path):
                 os.remove(base_filename+'.mp3')
 
 
-def get_upv_episode(output_path, episode_link):
+def get_upv_episode(output_path, episode_url):
     """
     Buscar
         Url del episodio: https://ehutb.ehu.eus/video/5cb5e3d3f82b2bcf598b464c
@@ -202,7 +205,7 @@ def get_upv_episode(output_path, episode_link):
     """
     driver = get_driver()
     try:
-        driver.get(episode_link)
+        driver.get(episode_url)
         timeout = 50
         title = driver.find_element(By.CLASS_NAME, 'mmobj-title').text.strip()
         series = driver.find_element(By.CSS_SELECTOR, 'div.col-xs-12>div>strong>a').text.strip()
@@ -215,7 +218,7 @@ def get_upv_episode(output_path, episode_link):
             'album': f'Podcast {series}',
             'title': f'{author} - {title}',
             'date': date,
-            'website': episode_link,
+            'website': episode_url,
             'genre': 'Podcast'
         }
         WebDriverWait(driver, timeout).until(
@@ -229,7 +232,7 @@ def get_upv_episode(output_path, episode_link):
         mp3_filename = mp4_to_mp3(path=output_path, mp4_name=mp4_filename)
         write_id3_tags_dict(mp3_filename=mp3_filename, art_filename=None, tag_dict=tag_dict)
     except Exception as ex:
-        print(f'Error loading {episode_link} - {ex}')
+        print(f'Error loading {episode_url} - {ex}')
     finally:
         driver.close()
     pass

@@ -6,6 +6,5 @@ mutagen~=1.46.0
 pytube~=15.0.0
 moviepy~=1.0.3
 beautifulsoup4~=4.12.2
-tqdm~=4.65.0
 # selenium~=3.141.0 # webdriver compatible con Opera
 selenium~=4.14.0

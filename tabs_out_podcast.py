@@ -16,6 +16,9 @@ from utils import create_filename_and_folders
 
 
 class TabsOutPodcast(AbstractPodcast):
+    """
+        Implements AbstractPodcast for the TabsOut.com podcast
+    """
 
     def __init__(self, output_path=None):
         self.__output_path = output_path
@@ -24,7 +27,8 @@ class TabsOutPodcast(AbstractPodcast):
         return urlparse(url_to_check).hostname.find('tabsout') != -1
 
     def list_episodes(self, start_url: str) -> list:
-        return get_tabs_out_episode_list()
+        # podcast_url = 'https://tabsout.com/?cat=5'
+        return get_tabs_out_episode_list(start_url)
 
     def get_episode(self, episode_url: str) -> bool:
         return get_episode(output_path=self.__output_path, episode_url=episode_url)
@@ -33,16 +37,17 @@ class TabsOutPodcast(AbstractPodcast):
         self.__output_path = output_path
 
 
-def get_tabs_out_episode_list():
-    podcast_url = 'https://tabsout.com/?cat=5'
+def get_tabs_out_episode_list(podcast_url):
     episodes = []
     try:
         while True:
-            response = requests.get(podcast_url, headers={"Accept-Language": "es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3"})
+            response = requests.get(podcast_url,
+                                    headers={'Accept-Language': 'es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3'},
+                                    timeout=10)
             if not response.ok:
                 print(f'Error getting index: {podcast_url}')
                 break
-            soup = BeautifulSoup(response.text, features="html.parser")
+            soup = BeautifulSoup(response.text, features='html.parser')
             links = soup.select('a.ek-link')
             episodes.extend([l.get('href', '') for l in links])
             next_page = soup.select_one('a.next')
@@ -53,7 +58,7 @@ def get_tabs_out_episode_list():
 
 
 def get_episode_cover_art(output_dir, podcast_title, img_url):
-    img_req = requests.get(img_url)
+    img_req = requests.get(img_url, timeout=10)
     img_filename = create_filename_and_folders(output_dir, podcast_title, img_url)
     ext_sep = img_filename.rfind('-', len(img_filename) - 5, len(img_filename))
     img_filename = img_filename[:ext_sep - 1] + '.' + img_filename[ext_sep + 1:]
@@ -74,11 +79,13 @@ def get_episode(output_path, episode_url):
     """
     if not output_path:
         raise FileNotFoundError
-    response = requests.get(episode_url, headers={"Accept-Language": "es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3"})
+    response = requests.get(episode_url,
+                            headers={'Accept-Language': 'es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3'},
+                            timeout=10)
     if not response.ok:
         print(f'Error getting index: {episode_url}')
         return
-    soup = BeautifulSoup(response.text, features="html.parser")
+    soup = BeautifulSoup(response.text, features='html.parser')
     episode_title = soup.select_one('h2.wp-block-heading').text
     episode_author = 'Tabs Out'
     episode_album = 'Podcast Tabs Out'
@@ -90,7 +97,7 @@ def get_episode(output_path, episode_url):
         audio = soup.select_one('audio')
     mp3_link = audio.get('src', None)
     if mp3_link:
-        redirected = requests.get(mp3_link)
+        redirected = requests.get(mp3_link, timeout=10)
         mp3_filename = create_filename_and_folders(output_dir=output_path,
                                                    podcast_title=slugify(episode_album),
                                                    filename=episode_title) + '.mp3'
@@ -101,8 +108,3 @@ def get_episode(output_path, episode_url):
                                                img_url=podcast_artwork)
         write_mp3_tags(episode_title, episode_author, podcast_date, image_filename, mp3_filename)
 
-
-if __name__ == '__main__':
-    episode_list = get_tabs_out_episode_list()
-    for episode in episode_list:
-        get_episode(episode)
