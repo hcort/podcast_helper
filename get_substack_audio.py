@@ -4,6 +4,8 @@ from urllib.parse import urlparse
 import requests
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+
+from abstract_podcast import AbstractPodcast
 from import_selenium_cond import Keys
 from selenium.webdriver.common.by import By
 from slugify import slugify
@@ -11,6 +13,24 @@ from tqdm import tqdm
 import json
 
 from mp3_tags import write_id3_tags_dict
+
+
+class SubstackPodcast(AbstractPodcast):
+
+    def __init__(self, output_path=None):
+        self.__output_path = output_path
+
+    def check_url(self, url_to_check: str) -> bool:
+        return urlparse(url_to_check).hostname.find('substack') != -1
+
+    def list_episodes(self, start_url: str) -> list:
+        return list_all_podcasts(start_url)
+
+    def get_episode(self, episode_url: str) -> bool:
+        return get_substack_episode(output_path=self.__output_path, episode_url=episode_url)
+
+    def set_output_path(self, output_path: str):
+        self.__output_path = output_path
 
 
 class ProgressVisorTQDM:

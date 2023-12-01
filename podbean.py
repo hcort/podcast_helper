@@ -3,6 +3,7 @@
 """
 import json
 import time
+from urllib.parse import urlparse
 
 import requests
 from selenium.common.exceptions import NoSuchElementException
@@ -10,9 +11,28 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 
+from abstract_podcast import AbstractPodcast
 from get_driver import get_driver, hijack_cookies
-from get_episode import create_filename_and_folders
+from utils import create_filename_and_folders
 from mp3_tags import write_mp3_tags
+
+
+class PodbeanPodcast(AbstractPodcast):
+
+    def __init__(self, output_path=None):
+        self.__output_path = output_path
+
+    def check_url(self, url_to_check: str) -> bool:
+        return urlparse(url_to_check).hostname.find('podbean') != -1
+
+    def list_episodes(self, start_url: str) -> list:
+        return get_episode_list(start_url)
+
+    def get_episode(self, episode_url: str) -> bool:
+        return get_episode(output_path=self.__output_path, episode_url=episode_url)
+
+    def set_output_path(self, output_path: str):
+        self.__output_path = output_path
 
 
 def get_episode_cover_art(driver, output_dir, podcast_title):
@@ -31,7 +51,8 @@ def get_episode_cover_art(driver, output_dir, podcast_title):
     return img_filename
 
 
-def get_episode(driver, episode, output_dir):
+def get_episode(episode, output_dir):
+    driver = get_driver()
     if not episode or not driver:
         return None
     driver.get(episode)
@@ -56,7 +77,8 @@ def get_episode(driver, episode, output_dir):
         print(f'{episode} - {driver.title} - {err}')
 
 
-def get_episode_list(driver, podcast):
+def get_episode_list(podcast):
+    driver = get_driver()
     if not podcast or not driver:
         return None
     driver.get(podcast)
@@ -81,11 +103,3 @@ def get_episode_list(driver, podcast):
         print(f'{podcast} - Error getting episode list: {err}')
     return episode_list
 
-
-def get_podbean_episode(output_path, episode_url):
-    get_episode(driver=get_driver(), episode=episode_url, output_dir=output_path)
-
-
-def get_podbean_episode_list(base_url):
-    episode_list = get_episode_list(driver=get_driver(), podcast=base_url)
-    return episode_list

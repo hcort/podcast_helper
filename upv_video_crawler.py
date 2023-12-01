@@ -18,9 +18,28 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 from slugify import slugify
 
+from abstract_podcast import AbstractPodcast
 from get_driver import get_driver
 from get_substack_audio import download_file
 from mp3_tags import mp4_to_mp3, write_id3_tags_dict
+
+
+class UpvVideoPodcast(AbstractPodcast):
+
+    def __init__(self, output_path=None):
+        self.__output_path = output_path
+
+    def check_url(self, url_to_check: str) -> bool:
+        return urlparse(url_to_check).hostname.find('ehutb.ehu') != -1
+
+    def list_episodes(self, start_url: str) -> list:
+        return get_episode_list(start_url)
+
+    def get_episode(self, episode_url: str) -> bool:
+        return get_upv_episode(output_path=self.__output_path, episode_url=episode_url)
+
+    def set_output_path(self, output_path: str):
+        self.__output_path = output_path
 
 
 def get_video_subtitle(video_element):
@@ -35,7 +54,7 @@ def get_video_id(video_element):
     return video_url.split('=')[1]
 
 
-def parse_index(index_url, output_path):
+def get_episode_mp3_urls(index_url):
     """
         Lee todos los enlaces de una serie.
         Por cada vídeo descarga el fichero mp4, lo convierte a mp3 y añade tag de título
@@ -68,6 +87,70 @@ def parse_index(index_url, output_path):
         except Exception as err:
             print(f'Error getting index: {next_url} - Exception: {err}')
             next_url = ''
+    return all_video_urls
+
+
+def get_episode_list(index_url):
+    """
+        Lee todos los enlaces de una serie.
+        Por cada vídeo descarga el fichero mp4, lo convierte a mp3 y añade tag de título
+
+        Al procesar la lista obtenemos todos los datos necesarios y no tenemos que navegar a
+        las entradas individuales de cada vídeo
+
+    :param index_url: índice de la serie de vídeos
+    :param output_path: donde almaceno los vídeos
+    """
+    all_video_urls = []
+    next_url = index_url
+    url_parsed = urlparse(index_url)
+    serie_title = ''
+    while next_url:
+        try:
+            response = requests.get(next_url,
+                                    headers={'Accept-Language': 'es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3'},
+                                    timeout=100)
+            if not response.ok:
+                print(f'Error getting index: {next_url}')
+                break
+            soup = BeautifulSoup(response.text, features='html.parser')
+            if not serie_title:
+                serie_title = soup.select_one('h1.title-for-crumbs').text[7:]
+            all_video_urls += [f'{url_parsed.scheme}://{url_parsed.netloc}{x[0].get("href")}'
+                               for x in soup.select('div.title>a')]
+            next_button = soup.select_one('a[rel="next"]')
+            next_page = next_button.get('href', '') if next_button else ''
+            next_url = f'{url_parsed.scheme}://{url_parsed.netloc}{next_page}' if next_page else ''
+        except Exception as err:
+            print(f'Error getting index: {next_url} - Exception: {err}')
+            next_url = ''
+    return all_video_urls
+
+
+def get_series_title(index_url):
+    response = requests.get(index_url,
+                            headers={'Accept-Language': 'es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3'},
+                            timeout=100)
+    if not response.ok:
+        print(f'Error getting index: {index_url}')
+        return None
+    soup = BeautifulSoup(response.text, features='html.parser')
+    return soup.select_one('h1.title-for-crumbs').text[7:]
+
+
+def parse_index(index_url, output_path):
+    """
+        Lee todos los enlaces de una serie.
+        Por cada vídeo descarga el fichero mp4, lo convierte a mp3 y añade tag de título
+
+        Al procesar la lista obtenemos todos los datos necesarios y no tenemos que navegar a
+        las entradas individuales de cada vídeo
+
+    :param index_url: índice de la serie de vídeos
+    :param output_path: donde almaceno los vídeos
+    """
+    all_video_urls = get_episode_list(index_url)
+    serie_title = get_series_title(index_url)
     for video_link in all_video_urls:
         video_id = get_video_id(video_link)
         [video_date, video_author] = get_video_subtitle(video_link)
@@ -172,5 +255,5 @@ if __name__ == '__main__':
     ]
     mp3_path = './output/'
     for serie in all_series_url:
-        parse_index(serie, mp3_path)
+        get_episode_mp3_urls(serie)
     print('done')

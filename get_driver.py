@@ -13,6 +13,7 @@ import requests
 from selenium import webdriver
 # from selenium.webdriver.opera.options import Options
 
+global_selenium_driver = None
 
 def hijack_cookies(driver):
     cookies = driver.get_cookies()
@@ -30,6 +31,7 @@ def hijack_cookies(driver):
 
 
 def get_driver():
+    global global_selenium_driver
     # os.environ['MOZ_HEADLESS'] = '1'
     firefox_loc = r'C:\Program Files\Mozilla Firefox\firefox.exe'
     # service = Service(executable_path=firefox_loc)
@@ -37,7 +39,8 @@ def get_driver():
     options = webdriver.FirefoxOptions()
     options.binary_location = firefox_loc
     # return webdriver.Firefox(timeout=30, firefox_options=options)
-    return webdriver.Firefox()
+    global_selenium_driver = webdriver.Firefox()
+    return global_selenium_driver
 
 
 def get_driver_opera(opera_exe_location, opera_preferences_location):

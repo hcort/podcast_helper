@@ -1,10 +1,32 @@
 import os
+import urllib
+from urllib.parse import urlparse
+
 import moviepy.editor
 import pytube
 import requests
 from slugify import slugify
 
+from abstract_podcast import AbstractPodcast
 from mp3_tags import mp4_to_mp3, write_id3_tags_dict
+
+
+class YoutubePodcast(AbstractPodcast):
+
+    def __init__(self, output_path=None):
+        self.__output_path = output_path
+
+    def check_url(self, url_to_check: str) -> bool:
+        return urlparse(url_to_check).hostname.find('youtube') != -1
+
+    def list_episodes(self, start_url: str) -> list:
+        return list_videos_from_playlist(start_url)
+
+    def get_episode(self, episode_url: str) -> bool:
+        return get_youtube_episode(output_path=self.__output_path, episode_url=episode_url)
+
+    def set_output_path(self, output_path: str):
+        self.__output_path = output_path
 
 
 def save_image_from_url(thumbnail_url, output_path, nombre):
@@ -30,6 +52,8 @@ def save_image_from_url(thumbnail_url, output_path, nombre):
 
 
 def youtube_to_mp3(output_path, url):
+    if not output_path:
+        raise FileNotFoundError
     try:
         yt = pytube.YouTube(url)
         stream = yt.streams.filter(mime_type='audio/mp4', only_audio=True).desc().first()
@@ -51,12 +75,14 @@ def youtube_to_mp3(output_path, url):
         cover_image_filename = save_image_from_url(yt.thumbnail_url, output_path, nombre)
         mp3_filename = mp4_to_mp3(output_path, nombre, extension, delete_mp4=True)
         write_id3_tags_dict(mp3_filename, cover_image_filename, tag_dict)
+        return True
     except pytube.exceptions.RegexMatchError:
         print('URL no encontrada')
     except Exception as err:
         print(f'Unexpected {err}, {type(err)}')
     except BaseException as err:
         print(f'Unexpected {err}, {type(err)}')
+    return False
 
 
 def list_videos_from_playlist(playlist_url):
@@ -104,6 +130,3 @@ def youtube_download_video(output_path, url, index=0):
     except Exception as err:
         print(f"Unexpected {err}, {type(err)}")
 
-
-def get_youtube_episode(output_path, episode_url):
-    youtube_to_mp3(output_path=output_path, url=episode_url)

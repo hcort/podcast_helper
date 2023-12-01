@@ -1,15 +1,70 @@
 import json
+import time
+from urllib.parse import urlparse
 
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
-
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from abstract_podcast import AbstractPodcast
 from get_driver import get_driver, hijack_cookies
-from get_episode import create_filename_and_folders
+from utils import create_filename_and_folders
 from mp3_tags import write_mp3_tags
 
 podcast_json_id = 'shoebox-media-api-cache-amp-podcasts'
 
 
-def get_episode(driver, episode, output_dir):
+class ApplePodcast(AbstractPodcast):
+
+    def __init__(self, output_path=None):
+        self.__output_path = output_path
+
+    def check_url(self, url_to_check: str) -> bool:
+        return urlparse(url_to_check).hostname.find('apple') != -1
+
+    def list_episodes(self, start_url: str) -> list:
+        return get_all_episodes(start_url)
+
+    def get_episode(self, episode_url: str) -> bool:
+        return get_episode(output_path=self.__output_path, episode_url=episode_url)
+
+    def set_output_path(self, output_path: str):
+        self.__output_path = output_path
+
+
+def get_all_episodes(start_url):
+    # div.list-button button.link
+    driver = get_driver()
+    timeout = 10
+    all_podcast_links = []
+    try:
+        keep_scrolling = True
+        driver.get(start_url)
+        while keep_scrolling:
+            try:
+                # scroll_element = driver.find_element(By.CLASS_NAME, "visibility-check")
+                try:
+                    more_episodes_button_presence = EC.presence_of_element_located(
+                        (By.ID, "didomi-notice-agree-button"))
+                    WebDriverWait(driver, timeout).until(more_episodes_button_presence)
+                except TimeoutException:
+                    keep_scrolling = False
+                button = driver.find_element(By.CSS_SELECTOR, 'div.list-button button.link')
+                button.click()
+                time.sleep(2)
+            except NoSuchElementException:
+                keep_scrolling = False
+        all_podcast_entries = driver.find_elements(By.CSS_SELECTOR, 'ol.tracks a.link')
+        all_podcast_links = [item.get_attribute('href') for item in all_podcast_entries]
+    except TimeoutException as ex:
+        print(f'Error accessing {start_url}: Timeout: {ex}')
+    finally:
+        driver.close()
+    return all_podcast_links
+
+
+def get_episode(episode, output_dir):
+    driver = get_driver()
     if not episode or not driver:
         return None
     driver.get(episode)
@@ -31,6 +86,3 @@ def get_episode(driver, episode, output_dir):
     except Exception as err:
         print(f'{episode} - {driver.title} - {err}')
 
-
-def get_apple_podcast_episode(output_path, episode_url):
-    get_episode(driver=get_driver(), episode=episode_url, output_dir=output_path)
