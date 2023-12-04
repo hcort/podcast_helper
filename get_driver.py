@@ -16,6 +16,8 @@ from selenium import webdriver
 # from selenium.webdriver.opera.options import Options
 from sys import platform
 
+from selenium.webdriver.firefox.service import Service
+
 from utils import read_config_object
 
 global_selenium_driver = None
@@ -52,17 +54,20 @@ def hijack_cookies(driver):
 
 def get_driver():
     global global_selenium_driver
-    # os.environ['MOZ_HEADLESS'] = '1'
-    firefox_loc = firefox_location()
-    geckodriver_path = os.path.join(os.path.join(os.getcwd(), 'res'), os.path.join('res', geckodriver_name()))
-    shutil.copy(geckodriver_path, os.getcwd())
-    # service = Service(executable_path=firefox_loc)
-    # return webdriver.Firefox(service=service)
-    options = webdriver.FirefoxOptions()
-    options.binary_location = firefox_loc
-    # return webdriver.Firefox(timeout=30, firefox_options=options)
-    log_path = os.path.join(os.path.join(os.getcwd(), 'log'), os.path.join('log', 'geckodriver.log'))
-    global_selenium_driver = webdriver.Firefox(log_path=log_path)
+    if not global_selenium_driver:
+        os.environ['MOZ_HEADLESS'] = '1'
+        firefox_loc = firefox_location()
+        print(firefox_loc)
+        geckodriver_path = os.path.join(os.getcwd(), os.path.join('res', geckodriver_name()))
+        shutil.copy(geckodriver_path, os.getcwd())
+        # service = Service(executable_path=firefox_loc)
+        # return webdriver.Firefox(service=service)
+        options = webdriver.FirefoxOptions()
+        options.binary_location = firefox_loc
+        # return webdriver.Firefox(timeout=30, firefox_options=options)
+        log_path = os.path.join(os.path.join(os.getcwd(), 'log'), os.path.join('log', 'geckodriver.log'))
+        service = Service(log_path=log_path)
+        global_selenium_driver = webdriver.Firefox(service=service)
     return global_selenium_driver
 
 
