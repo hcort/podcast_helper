@@ -6,11 +6,11 @@ from urllib.parse import urlparse
 
 import moviepy.editor
 import pytube
-import requests
 from slugify import slugify
 
 from abstract_podcast import AbstractPodcast
 from mp3_tags import mp4_to_mp3, write_id3_tags_dict
+from utils import download_file_requests_stream
 
 
 class YoutubePodcast(AbstractPodcast):
@@ -37,21 +37,7 @@ class YoutubePodcast(AbstractPodcast):
 def save_image_from_url(thumbnail_url, output_path, nombre):
     image_path = os.path.join(output_path, f'{nombre}.jpg')
     if not os.path.exists(image_path):
-        with open(image_path, 'wb') as handle:
-            try:
-                response = requests.get(thumbnail_url, stream=True, timeout=30)
-                if not response.ok:
-                    print('Error getting image: ' + thumbnail_url)
-                for block in response.iter_content(1024):
-                    if not block:
-                        break
-                    handle.write(block)
-            except ConnectionError as err:
-                print('Error getting image: ' + thumbnail_url)
-                print(err)
-            except Exception as err:
-                print('Error getting image: ' + thumbnail_url)
-                print(err)
+        download_file_requests_stream(file_url=thumbnail_url, file_name=image_path)
     return image_path
 
 

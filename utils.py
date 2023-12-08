@@ -5,9 +5,36 @@ import datetime
 import json
 import os
 import shutil
-import zipfile
 
+import requests
+from bs4 import BeautifulSoup
 from slugify import slugify
+
+
+def download_file_requests_stream(file_url, file_name, block_size=1):
+    with open(file_name, 'wb') as handle:
+        try:
+            response = requests.get(file_url, stream=True, timeout=30)
+            if not response.ok:
+                print(f'Error getting file: {file_url} - HTTP error')
+            for block in response.iter_content(1024*block_size):
+                if not block:
+                    break
+                handle.write(block)
+        except ConnectionError as err:
+            print(f'Error getting file: {file_url} - {err}')
+        except Exception as err:
+            print(f'Error getting file: {file_url} - {err}')
+
+
+def get_soup_from_requests(podcast_url):
+    response = requests.get(podcast_url,
+                            headers={'Accept-Language': 'es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3'},
+                            timeout=10)
+    if not response.ok:
+        print(f'Error getting page: {podcast_url}')
+        return None
+    return BeautifulSoup(response.text, features='html.parser')
 
 
 def zip_folder(base_folder, folder):
@@ -43,5 +70,5 @@ def read_config_object():
         }
     :return:
     """
-    with open(os.path.join('res', 'config.json'), 'r') as fp:
+    with open(os.path.join('res', 'config.json'), 'r', encoding='utf-8') as fp:
         return json.load(fp)

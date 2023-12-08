@@ -12,7 +12,7 @@ from slugify import slugify
 
 from abstract_podcast import AbstractPodcast
 from mp3_tags import write_mp3_tags
-from utils import create_filename_and_folders
+from utils import create_filename_and_folders, get_soup_from_requests, download_file_requests_stream
 
 
 class TabsOutPodcast(AbstractPodcast):
@@ -41,13 +41,9 @@ def get_tabs_out_episode_list(podcast_url):
     episodes = []
     try:
         while True:
-            response = requests.get(podcast_url,
-                                    headers={'Accept-Language': 'es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3'},
-                                    timeout=10)
-            if not response.ok:
-                print(f'Error getting index: {podcast_url}')
+            soup = get_soup_from_requests(podcast_url)
+            if not soup:
                 break
-            soup = BeautifulSoup(response.text, features='html.parser')
             links = soup.select('a.ek-link')
             episodes.extend([l.get('href', '') for l in links])
             next_page = soup.select_one('a.next')
@@ -97,12 +93,10 @@ def get_episode(output_path, episode_url):
         audio = soup.select_one('audio')
     mp3_link = audio.get('src', None)
     if mp3_link:
-        redirected = requests.get(mp3_link, timeout=10)
         mp3_filename = create_filename_and_folders(output_dir=output_path,
                                                    podcast_title=slugify(episode_album),
                                                    filename=episode_title) + '.mp3'
-        with open(mp3_filename, mode='wb') as localfile:
-            localfile.write(redirected.content)
+        download_file_requests_stream(file_url=mp3_link, file_name=mp3_filename, block_size=1)
         image_filename = get_episode_cover_art(output_dir=output_path,
                                                podcast_title=slugify(episode_album),
                                                img_url=podcast_artwork)
