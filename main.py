@@ -6,11 +6,11 @@
 """
 from get_driver import close_and_remove_driver
 from register_all_podcasts import create_abstract_podcast_list
-
-output_path_def = r'F:\bkp\podcast'
+from utils import read_config_object
 
 
 if __name__ == '__main__':
+    output_path_def = read_config_object()['output_folder']
     all_podcasts = create_abstract_podcast_list(output_path_def)
     episode_list = []
     for episode in episode_list:

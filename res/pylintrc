@@ -156,7 +156,7 @@ evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / stateme
 [BASIC]
 
 # Good variable names which should always be accepted, separated by a comma
-good-names=main,_,vBulletin*
+good-names=main,_
 
 # Bad variable names which should always be refused, separated by a comma
 bad-names=
@@ -190,6 +190,7 @@ argument-rgx=^[a-z][a-z0-9_]*$
 # Regular expression matching correct class attribute names
 class-attribute-rgx=^(_?[A-Z][A-Z0-9_]*|__[a-z0-9_]+__|_?[a-z][a-z0-9_]*)$
 
+<<<<<<< HEAD
 # Naming style matching correct class names.
 class-naming-style=PascalCase
 
@@ -197,6 +198,8 @@ class-naming-style=PascalCase
 # style. If left empty, class names will be checked with the set naming style.
 # class-rgx=^_?[A-Z][a-zA-Z0-9]*$
 
+=======
+>>>>>>> origin/master
 # Regular expression matching correct inline iteration names
 inlinevar-rgx=^[a-z][a-z0-9_]*$
 

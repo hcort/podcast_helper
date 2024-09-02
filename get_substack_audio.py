@@ -6,7 +6,6 @@ import os
 import time
 from urllib.parse import urlparse
 
-import requests
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from selenium.webdriver.common.by import By
@@ -15,6 +14,7 @@ from slugify import slugify
 from abstract_podcast import AbstractPodcast
 from import_selenium_cond import Keys
 from mp3_tags import write_id3_tags_dict
+from utils import download_file_requests_stream
 
 
 class SubstackPodcast(AbstractPodcast):
@@ -41,20 +41,7 @@ class SubstackPodcast(AbstractPodcast):
 def download_file(output_path, link, name):
     filename = os.path.join(output_path, name)
     if not os.path.exists(filename):
-        with open(filename, 'wb') as handle:
-            try:
-                response = requests.get(link, stream=True, timeout=100)
-                block_size = 1024 * 64
-                if not response.ok:
-                    print('Error getting file: ' + link)
-                for block in response.iter_content(block_size):
-                    if not block:
-                        break
-                    handle.write(block)
-            except ConnectionError as err:
-                print(f'Error getting file: {link} - {err}')
-            except Exception as err:
-                print(f'Error getting file: {link} - {err}')
+        download_file_requests_stream(link, filename, block_size=64)
     return filename
 
 

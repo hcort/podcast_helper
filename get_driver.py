@@ -17,8 +17,27 @@ from selenium.webdriver.firefox.service import Service
 from webdriver_manager.firefox import GeckoDriverManager
 
 # from selenium.webdriver.opera.options import Options
+from sys import platform
+
+from selenium.webdriver.firefox.service import Service
+
+from utils import read_config_object
 
 global_selenium_driver = None
+
+
+def geckodriver_name():
+    if platform == 'win32':
+        return 'geckodriver.exe'
+    else:
+        return 'geckodriver'
+
+
+def firefox_location():
+    if platform == 'win32':
+        return read_config_object()['firefox_location']['windows']
+    else:
+        return read_config_object()['firefox_location']['linux']
 
 
 def hijack_cookies(driver):
@@ -61,7 +80,7 @@ def get_driver():
 def close_and_remove_driver():
     if global_selenium_driver:
         global_selenium_driver.quit()
-        os.remove(os.path.join(os.getcwd(), 'geckodriver.exe'))
+        os.remove(os.path.join(os.getcwd(), os.path.join('res', geckodriver_name())))
 
 
 def get_driver_opera(opera_exe_location, opera_preferences_location):
