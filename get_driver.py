@@ -13,6 +13,9 @@ import shutil
 
 import requests
 from selenium import webdriver
+from selenium.webdriver.firefox.service import Service
+from webdriver_manager.firefox import GeckoDriverManager
+
 # from selenium.webdriver.opera.options import Options
 
 global_selenium_driver = None
@@ -35,17 +38,23 @@ def hijack_cookies(driver):
 
 def get_driver():
     global global_selenium_driver
+    use_opera = False
     # os.environ['MOZ_HEADLESS'] = '1'
-    firefox_loc = r'C:\Program Files\Mozilla Firefox\firefox.exe'
-    geckodriver_path = os.path.join(os.path.join(os.getcwd(), 'res'), 'geckodriver.exe')
-    shutil.copy(geckodriver_path, os.getcwd())
-    # service = Service(executable_path=firefox_loc)
-    # return webdriver.Firefox(service=service)
-    options = webdriver.FirefoxOptions()
-    options.binary_location = firefox_loc
-    # return webdriver.Firefox(timeout=30, firefox_options=options)
-    log_path = os.path.join(os.path.join(os.getcwd(), 'log'), 'geckodriver.log')
-    global_selenium_driver = webdriver.Firefox(log_path=log_path)
+    if not global_selenium_driver:
+        if use_opera:
+            global_selenium_driver = get_driver_opera('', os.path.join(os.getcwd(), 'opera_prefs'))
+        else:
+            firefox_loc = r'C:\Program Files\Mozilla Firefox\firefox.exe'
+            geckodriver_path = os.path.join(os.path.join(os.getcwd(), 'res'), 'geckodriver.exe')
+            shutil.copy(geckodriver_path, os.getcwd())
+            # service = Service(executable_path=firefox_loc)
+            # return webdriver.Firefox(service=service)
+            options = webdriver.FirefoxOptions()
+            options.binary_location = firefox_loc
+            # return webdriver.Firefox(timeout=30, firefox_options=options)
+            log_path = os.path.join(os.path.join(os.getcwd(), 'log'), 'geckodriver.log')
+            # global_selenium_driver = webdriver.Firefox()
+            global_selenium_driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()))
     return global_selenium_driver
 
 

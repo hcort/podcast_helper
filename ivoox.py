@@ -24,7 +24,7 @@ from abstract_podcast import AbstractPodcast
 from get_driver import get_driver
 from get_driver import hijack_cookies, get_driver_opera
 from mp3_tags import write_mp3_tags
-from utils import create_filename_and_folders
+from utils import create_filename_and_folders, file_exists, get_file_requests
 
 
 class IvooxPodcast(AbstractPodcast):
@@ -49,6 +49,8 @@ class IvooxPodcast(AbstractPodcast):
 
 
 def wait_for_cookies(webdriver_waiting_for_cookies, timeout, url):
+    if webdriver_waiting_for_cookies.get_cookie('cookies_policy_accepted'):
+        return
     try:
         cookie_button_present = EC.presence_of_element_located((By.ID, 'didomi-notice-agree-button'))
         WebDriverWait(webdriver_waiting_for_cookies, timeout).until(cookie_button_present)
@@ -75,7 +77,7 @@ def list_episodes_simple(start_url):
     while next_page:
         episodes_in_page = list_episodes(next_page)
         episode_list.extend([x['url'] for x in episodes_in_page['episode_list']])
-        next_page = episodes_in_page['next_page']
+        next_page = '' if episodes_in_page['next_page'].find(next_page) >= 0 else episodes_in_page['next_page']
     return episode_list
 
 
@@ -101,9 +103,14 @@ def list_episodes(start_url=None, prev_page='', page_no=1):
                 all_titles_p,
                 all_description_buttons,
                 all_short_descriptions)):
+            link_element = title.find_element(By.TAG_NAME, 'a')
+            if not link_element:
+                continue
             link = title.find_element(By.TAG_NAME, 'a').get_attribute('href')
             description = short_description.text
             try:
+                webdriver.execute_script("arguments[0].scrollIntoView();window.scrollBy(0,-200)", button)
+                time.sleep(1)
                 button.click()
                 element_present = EC.presence_of_element_located((By.CLASS_NAME, 'popover-content'))
                 WebDriverWait(webdriver, timeout).until(element_present)
@@ -114,10 +121,12 @@ def list_episodes(start_url=None, prev_page='', page_no=1):
             except Exception as err:
                 print(f'Error clicking description: {err}')
             episodes_in_page['episode_list'].append({'url': link, 'desc': description})
-        next_page_button = webdriver.find_elements(By.LINK_TEXT, '»')
-        episodes_in_page['next_page'] = next_page_button[0].get_attribute('href') if next_page_button else ''
+        next_page_button = webdriver.find_elements(By.CSS_SELECTOR, 'ul.pagination > li > a')
+        episodes_in_page['next_page'] = next_page_button[-1].get_attribute('href') if next_page_button else ''
     except TimeoutException as ex:
         print(f'Error accessing {webdriver.current_url}: Timeout: {str(ex)}')
+    except Exception as ex:
+        print(f'Error accessing {webdriver.current_url}: Unknown error: {str(ex)}')
     return episodes_in_page
 
 
@@ -179,27 +188,44 @@ def get_episode(output_path, episode_url):
     try:
         remove_promo_popup(driver)
 
+        try:
+            if driver.find_element(By.ID, 'apoyar-btn'):
+                print(f'The episode {episode_url} is behind the paywall - Can\'t download')
+                return False
+        except Exception:
+            # if the element is not present then we are in a regular episode
+            pass
+
         podcast_title = driver.find_element(By.CLASS_NAME, 'normal').get_attribute('title')
         podcast_date = driver.find_element(By.CLASS_NAME, 'icon-date').text
         episode_title = driver.find_element(By.TAG_NAME, 'h1').text
-        download_link = expand_download_button(driver, timeout)
+
         requests_session = hijack_cookies(driver)
-        requests_session = set_headers(requests_session, download_link.get_attribute('href'))
-        mp3_link = download_link.get_attribute('href')
-        redirected = requests_session.get(mp3_link)
-        mp3_filename_end = redirected.url.find('.mp3')
-        mp3_filename_start = redirected.url.rfind('/', 0, mp3_filename_end)
-        mp3_filename = redirected.url[mp3_filename_start+1:mp3_filename_end+4]
-        mp3_filename = create_filename_and_folders(output_path, slugify(podcast_title), episode_title) + '.mp3'
-        with open(mp3_filename, mode='wb') as localfile:
-            localfile.write(redirected.content)
+        import re
+        m = re.compile('_rf_([0-9]+_[0-9])').search(episode_url)
+        requests_session = set_headers(requests_session, episode_url)
+        redirect_url = f'https://www.ivoox.com/listen_mn_{m.groups(0)[0]}.mp3?internal=HTML5'
+        mp3_filename = create_filename_and_folders(output_path, podcast_title, episode_title) + '.mp3'
+        get_file_requests(requests_session, redirect_url, mp3_filename)
+        # download_link = expand_download_button(driver, timeout)
+        # requests_session = set_headers(requests_session, download_link.get_attribute('href'))
+        # mp3_link = download_link.get_attribute('href')
+        # redirected = requests_session.get(mp3_link)
+        # mp3_filename_end = redirected.url.find('.mp3')
+        # mp3_filename_start = redirected.url.rfind('/', 0, mp3_filename_end)
+        # mp3_filename = redirected.url[mp3_filename_start+1:mp3_filename_end+4]
+        # mp3_filename = create_filename_and_folders(output_path, slugify(podcast_title), episode_title) + '.mp3'
+        # with open(mp3_filename, mode='wb') as localfile:
+        #     localfile.write(redirected.content)
         image_filename = get_episode_cover_art(driver, output_path, slugify(podcast_title))
         write_mp3_tags(episode_title, podcast_title, podcast_date, image_filename, mp3_filename)
+        return True
     except TimeoutException as ex:
         # cookies already accepted
         print(f'Could not download episode {episode_url} - {ex}')
     except Exception as ex:
         print(f'Could not download episode {episode_url} - {ex}')
+    return False
 
 
 def expand_download_button(driver, timeout):

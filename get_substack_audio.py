@@ -124,9 +124,11 @@ def get_substack_episode(output_path, episode_url):
                 'genre': 'Podcast'
             }
             write_id3_tags_dict(mp3_filename, art_filename, tag_dict)
+            return True
     except TimeoutException as ex:
         print(f'Error accessing {episode_url}: Timeout: {str(ex)}')
     except Exception as ex:
         print(f'Error accessing {episode_url}: Exception: {str(ex)}')
     finally:
         driver.close()
+    return False

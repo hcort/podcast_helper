@@ -11,7 +11,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from abstract_podcast import AbstractPodcast
 from get_driver import get_driver, hijack_cookies
-from utils import create_filename_and_folders
+from utils import create_filename_and_folders, get_file_requests
 from mp3_tags import write_mp3_tags
 
 podcast_json_id = 'shoebox-media-api-cache-amp-podcasts'
@@ -49,12 +49,12 @@ def get_all_episodes(start_url):
         while keep_scrolling:
             try:
                 # scroll_element = driver.find_element(By.CLASS_NAME, "visibility-check")
-                try:
-                    more_episodes_button_presence = EC.presence_of_element_located(
-                        (By.ID, 'didomi-notice-agree-button'))
-                    WebDriverWait(driver, timeout).until(more_episodes_button_presence)
-                except TimeoutException:
-                    keep_scrolling = False
+                # try:
+                #     more_episodes_button_presence = EC.presence_of_element_located(
+                #         (By.ID, 'didomi-notice-agree-button'))
+                #     WebDriverWait(driver, timeout).until(more_episodes_button_presence)
+                # except TimeoutException:
+                #     keep_scrolling = False
                 button = driver.find_element(By.CSS_SELECTOR, 'div.list-button button.link')
                 button.click()
                 time.sleep(2)
@@ -64,15 +64,15 @@ def get_all_episodes(start_url):
         all_podcast_links = [item.get_attribute('href') for item in all_podcast_entries]
     except TimeoutException as ex:
         print(f'Error accessing {start_url}: Timeout: {ex}')
-    finally:
-        driver.close()
+    # finally:
+    #     driver.close()
     return all_podcast_links
 
 
 def get_episode(episode_url, output_path):
     driver = get_driver()
     if not episode_url or not driver:
-        return None
+        return False
     driver.get(episode_url)
     try:
         podcast_json_data = driver.find_element(By.ID, podcast_json_id).get_attribute('innerHTML')
@@ -84,11 +84,14 @@ def get_episode(episode_url, output_path):
         episode_mp3_url = json_dict['d'][0]['attributes']['assetUrl']
         image_filename = driver.find_element(By.CLASS_NAME, 'we-artwork__image').get_attribute('src')
         requests_session = hijack_cookies(driver)
-        redirected = requests_session.get(episode_mp3_url)
         mp3_filename = create_filename_and_folders(output_path, episode_autor, episode_title) + '.mp3'
-        with open(mp3_filename, mode='wb') as localfile:
-            localfile.write(redirected.content)
+        get_file_requests(requests_session, episode_mp3_url, mp3_filename)
+        # redirected = requests_session.get(episode_mp3_url)
+        # with open(mp3_filename, mode='wb') as localfile:
+        #     localfile.write(redirected.content)
         write_mp3_tags(episode_title, episode_autor, episode_date, image_filename, mp3_filename)
+        return True
     except Exception as err:
         print(f'{episode_url} - {driver.title} - {err}')
+    return False
 
