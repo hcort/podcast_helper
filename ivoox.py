@@ -9,6 +9,7 @@
 
 """
 import os
+import re
 import time
 from time import sleep
 from urllib.parse import urlparse
@@ -25,6 +26,9 @@ from get_driver import get_driver
 from get_driver import hijack_cookies, get_driver_opera
 from mp3_tags import write_mp3_tags
 from utils import create_filename_and_folders, file_exists, get_file_requests
+
+
+rgx_episode_id = re.compile('_rf_([0-9]+)_([0-9])')
 
 
 class IvooxPodcast(AbstractPodcast):
@@ -153,7 +157,7 @@ def set_headers(requests_session, referer_url):
 
 
 def get_episode_cover_art(webdriver, output_dir, podcast_title):
-    img_tag = webdriver.find_element(By.CLASS_NAME, 'main.lozad.elevate-2')
+    img_tag = webdriver.find_element(By.CSS_SELECTOR, 'div.layout-2-colums div.d-flex div.image-wrapper img')
     img_url = img_tag.get_attribute('src')
     img_req = requests.get(img_url, timeout=50)
     img_filename = create_filename_and_folders(output_dir, podcast_title, img_url)
@@ -196,30 +200,34 @@ def get_episode(output_path, episode_url):
             # if the element is not present then we are in a regular episode
             pass
 
-        podcast_title = driver.find_element(By.CLASS_NAME, 'normal').get_attribute('title')
-        podcast_date = driver.find_element(By.CLASS_NAME, 'icon-date').text
-        episode_title = driver.find_element(By.TAG_NAME, 'h1').text
+        podcast_title = driver.find_elements(By.CSS_SELECTOR, 'div.mb-6 > div.mb-2 > a')[1].text
+        podcast_date = driver.find_element(By.CSS_SELECTOR, 'div.play-features-1 > div > span').text.split('·')[0].strip()
+        episode_title = driver.find_element(By.CLASS_NAME, 'h2').text
 
-        requests_session = hijack_cookies(driver)
+        btn_dnl = driver.find_element(By.CSS_SELECTOR, 'div.play-features-1 div.stat  button')
+        btn_dnl.click()
+        time.sleep(1)
+
+        div_pop_up = btn_dnl.find_element(By.XPATH, './preceding-sibling::div')
+        div_pop_up_links = div_pop_up.find_elements(By.TAG_NAME, 'a')
+        div_pop_up_links[2].click()
+
         import re
-        m = re.compile('_rf_([0-9]+_[0-9])').search(episode_url)
-        requests_session = set_headers(requests_session, episode_url)
-        redirect_url = f'https://www.ivoox.com/listen_mn_{m.groups(0)[0]}.mp3?internal=HTML5'
-        mp3_filename = create_filename_and_folders(output_path, podcast_title, episode_title) + '.mp3'
-        get_file_requests(requests_session, redirect_url, mp3_filename)
-        # download_link = expand_download_button(driver, timeout)
-        # requests_session = set_headers(requests_session, download_link.get_attribute('href'))
-        # mp3_link = download_link.get_attribute('href')
-        # redirected = requests_session.get(mp3_link)
-        # mp3_filename_end = redirected.url.find('.mp3')
-        # mp3_filename_start = redirected.url.rfind('/', 0, mp3_filename_end)
-        # mp3_filename = redirected.url[mp3_filename_start+1:mp3_filename_end+4]
-        # mp3_filename = create_filename_and_folders(output_path, slugify(podcast_title), episode_title) + '.mp3'
-        # with open(mp3_filename, mode='wb') as localfile:
-        #     localfile.write(redirected.content)
-        image_filename = get_episode_cover_art(driver, output_path, slugify(podcast_title))
-        write_mp3_tags(episode_title, podcast_title, podcast_date, image_filename, mp3_filename)
-        return True
+        # m = re.compile('_rf_([0-9]+)_([0-9])').search(episode_url)
+        rgx_match = rgx_episode_id.search(episode_url)
+        if rgx_match:
+            episode_id = rgx_match.group(1)
+            # get download url from JSON
+            requests_session = hijack_cookies(driver)
+            requests_session = set_headers(requests_session, episode_url)
+            download_url_json = requests_session.get(f'https://vcore-web.ivoox.com/v1/public/audios/{episode_id}/download-url')
+            download_url = download_url_json.json()['data']['downloadUrl']
+            redirect_url = f'https://www.ivoox.com{download_url}'
+            mp3_filename = create_filename_and_folders(output_path, podcast_title, episode_title) + '.mp3'
+            get_file_requests(requests_session, redirect_url, mp3_filename)
+            image_filename = get_episode_cover_art(driver, output_path, slugify(podcast_title))
+            write_mp3_tags(episode_title, podcast_title, podcast_date, image_filename, mp3_filename)
+            return True
     except TimeoutException as ex:
         # cookies already accepted
         print(f'Could not download episode {episode_url} - {ex}')
