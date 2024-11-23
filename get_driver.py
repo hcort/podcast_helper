@@ -26,6 +26,17 @@ from utils import read_config_object
 global_selenium_driver = None
 
 
+class SeleniumDriver:
+    def __init__(self, headless=True):
+        self.__headless = headless
+
+    def __enter__(self):
+        return get_driver(headless=self.__headless)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        close_and_remove_driver()
+
+
 def geckodriver_name():
     if platform == 'win32':
         return 'geckodriver.exe'
@@ -55,10 +66,10 @@ def hijack_cookies(driver):
     return s
 
 
-def get_driver():
+def get_driver(headless=True):
     global global_selenium_driver
     use_opera = False
-    # os.environ['MOZ_HEADLESS'] = '1'
+    os.environ['MOZ_HEADLESS'] = '1' if headless
     if not global_selenium_driver:
         if use_opera:
             global_selenium_driver = get_driver_opera('', os.path.join(os.getcwd(), 'opera_prefs'))
