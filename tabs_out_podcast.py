@@ -4,6 +4,7 @@
 
     post-pagination
 """
+from sys import addaudithook
 from urllib.parse import urlparse
 
 import requests
@@ -63,7 +64,7 @@ def get_episode_cover_art(output_dir, podcast_title, img_url):
     return img_filename
 
 
-def get_episode(output_path, episode_url):
+def get_episode(output_path, episode_url) -> bool:
     """
     <audio playsinline="" preload="auto" class="player29594" id="player29594">
       <source src="https://tabsout.com/episodes/193.mp3" type="audio/mp3">
@@ -101,4 +102,5 @@ def get_episode(output_path, episode_url):
                                                podcast_title=slugify(episode_album),
                                                img_url=podcast_artwork)
         write_mp3_tags(episode_title, episode_author, podcast_date, image_filename, mp3_filename)
-
+        return True
+    return False
