@@ -24,12 +24,13 @@ def write_cover_art(art_filename, mp3_name):
     if not art_filename:
         return
     print(f'writing {art_filename} into {mp3_name}')
-    audio = MP3(mp3_name, ID3=ID3)
     try:
+        audio = MP3(mp3_name)
         audio.add_tags()
     except Exception:
         pass
     try:
+        audio = MP3(mp3_name)
         mime = 'image/png' if art_filename.endswith('png') else 'image/jpeg'
         file = open(art_filename, 'rb')
         data = file.read()
@@ -42,9 +43,9 @@ def write_cover_art(art_filename, mp3_name):
                 data=data
             )
         )
+        audio.save()
     except Exception as ex:
         print(f'Can\'t save cover image: {ex}')
-    audio.save()
 
 
 # writes some basic ID3 tags to the mp3 file
