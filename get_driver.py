@@ -69,7 +69,8 @@ def hijack_cookies(driver):
 def get_driver(headless=True):
     global global_selenium_driver
     use_opera = False
-    os.environ['MOZ_HEADLESS'] = '1' if headless
+    if headless:
+        os.environ['MOZ_HEADLESS'] = '1'
     if not global_selenium_driver:
         if use_opera:
             global_selenium_driver = get_driver_opera('', os.path.join(os.getcwd(), 'opera_prefs'))
@@ -91,7 +92,7 @@ def get_driver(headless=True):
 def close_and_remove_driver():
     if global_selenium_driver:
         global_selenium_driver.quit()
-        os.remove(os.path.join(os.getcwd(), os.path.join('res', geckodriver_name())))
+        os.remove(os.path.join(os.getcwd(), geckodriver_name()))
 
 
 def get_driver_opera(opera_exe_location, opera_preferences_location):
