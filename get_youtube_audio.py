@@ -42,6 +42,11 @@ def save_image_from_url(thumbnail_url, output_path, nombre):
 
 
 def get_youtube_episode(output_path, episode_url):
+    from pytube import YouTube
+    from pytube.innertube import _default_clients
+
+    _default_clients["ANDROID"]["context"]["client"]["clientVersion"] = "19.08.35"
+    _default_clients["ANDROID_MUSIC"] = _default_clients["ANDROID"]
     if not output_path:
         raise FileNotFoundError
     try:
@@ -65,8 +70,8 @@ def get_youtube_episode(output_path, episode_url):
         mp3_filename = mp4_to_mp3(output_path, nombre, extension, delete_mp4=True)
         write_id3_tags_dict(mp3_filename, cover_image_filename, tag_dict)
         return True
-    except pytube.exceptions.RegexMatchError:
-        print('URL no encontrada')
+    except pytube.exceptions.RegexMatchError as e:
+        print(f'URL no encontrada - {e}')
     except Exception as err:
         print(f'Unexpected {err}, {type(err)}')
     except BaseException as err:
@@ -75,7 +80,8 @@ def get_youtube_episode(output_path, episode_url):
 
 
 def list_videos_from_playlist(playlist_url):
-    return [video.watch_url for video in pytube.Playlist(playlist_url).videos]
+    all_videos = pytube.Playlist(playlist_url).videos
+    return [video.watch_url for video in all_videos]
 
 
 def create_output_folder_playlist(playlist_url, output_root):
