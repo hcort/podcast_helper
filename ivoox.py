@@ -25,8 +25,7 @@ from abstract_podcast import AbstractPodcast
 from get_driver import get_driver
 from get_driver import hijack_cookies, get_driver_opera
 from mp3_tags import write_mp3_tags
-from utils import create_filename_and_folders, file_exists, get_file_requests
-
+from utils import create_filename_and_folders, get_file_requests
 
 rgx_episode_id = re.compile('_rf_([0-9]+)_([0-9])')
 
@@ -79,9 +78,13 @@ def list_episodes_simple(start_url):
     episode_list = []
     next_page = start_url
     while next_page:
-        episodes_in_page = list_episodes(next_page)
-        episode_list.extend([x['url'] for x in episodes_in_page['episode_list']])
-        next_page = '' if episodes_in_page['next_page'].find(next_page) >= 0 else episodes_in_page['next_page']
+        try:
+            episodes_in_page = list_episodes(next_page)
+            episode_list.extend([x['url'] for x in episodes_in_page['episode_list']])
+            next_page = '' if episodes_in_page['next_page'].find(next_page) >= 0 else episodes_in_page['next_page']
+        except Exception as ex:
+            print(ex)
+            next_page = None
     return episode_list
 
 
