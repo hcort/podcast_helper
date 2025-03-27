@@ -5,7 +5,6 @@ import os
 from urllib.parse import urlparse
 
 import moviepy.editor
-import pytube
 from slugify import slugify
 
 from abstract_podcast import AbstractPodcast
@@ -41,7 +40,63 @@ def save_image_from_url(thumbnail_url, output_path, nombre):
     return image_path
 
 
+def get_youtube_episode_pytubefix(output_path, episode_url):
+    # PO TOKEN https://github.com/JuanBindez/pytubefix/pull/209
+    # poToken = MpQBh12Ld-5BeAqHZQ3rcKVhCY0dv3DMG0R2FmPFs3OXehNb8-IPEtkqF2-UeZE9tBm68W4_m2OdWwe8jrpVU0KMogtDqCn0zo0II44R360SFb7hygVQFzIZjtiLAxhkXuneLngyaqB9tA8PAWnhmvh1YdOjwSYSl86MiG7xxcSd-zeLfL3vdWEUK4QX7oOv1N0LDvAJwg==
+    potoken = 'MpQBh12Ld-5BeAqHZQ3rcKVhCY0dv3DMG0R2FmPFs3OXehNb8-IPEtkqF2-UeZE9tBm68W4_m2OdWwe8jrpVU0KMogtDqCn0zo0II44R360SFb7hygVQFzIZjtiLAxhkXuneLngyaqB9tA8PAWnhmvh1YdOjwSYSl86MiG7xxcSd-zeLfL3vdWEUK4QX7oOv1N0LDvAJwg=='
+    visitor_data = 'CgtwVzVIUzJ5OFpxayj035a-BjIiCgJFUxIcEhgSFhMLFBUWFwwYGRobHB0eHw4PIBAREiEgKw%3D%3D'
+    if not output_path:
+        raise FileNotFoundError
+    try:
+        import pytubefix
+        # yt = pytubefix.YouTube(episode_url)
+
+        yt = pytubefix.YouTube(episode_url, use_po_token=True)
+        stream = None
+        for i, st in enumerate(yt.streams.filter(mime_type='audio/mp4', only_audio=True)):
+        #     if st.is_default_audio_track:
+        #         stream = st
+        #         break
+        # if not stream:
+        #     raise Exception('No se ha encontrado audio por defecto')
+            stream = st
+            tag_dict = {
+                'artist': yt.author,
+                'album': f'Podcast {yt.author}',
+                'title': yt.title,
+                'date': str(yt.publish_date),
+                'length': yt.length,
+                'website': yt.channel_url,
+                # 'comment': f'{url}\n{yt.channel_url}\n{yt.description}',
+                # 'description': f'{url}\n{yt.channel_url}\n{yt.description}',
+                'genre': 'Podcast'
+            }
+            nombre = f'{slugify(stream.default_filename[:-4])}_{i}'
+            extension = stream.default_filename[-3:]
+            stream.download(output_path=output_path, filename=f'{nombre}.{extension}')
+            cover_image_filename = save_image_from_url(yt.thumbnail_url, output_path, nombre)
+            mp3_filename = mp4_to_mp3(output_path, nombre, extension, delete_mp4=False)
+            write_id3_tags_dict(mp3_filename, cover_image_filename, tag_dict)
+        return True
+    except pytubefix.exceptions.RegexMatchError as e:
+        print(f'URL no encontrada - {e}')
+    except Exception as err:
+        print(f'Unexpected {err}, {type(err)}')
+    except BaseException as err:
+        print(f'Unexpected {err}, {type(err)}')
+    return False
+
+
 def get_youtube_episode(output_path, episode_url):
+    use_fix = True
+    if use_fix:
+        return get_youtube_episode_pytubefix(output_path, episode_url)
+    else:
+        return get_youtube_episode_pytube(output_path, episode_url)
+
+
+def get_youtube_episode_pytube(output_path, episode_url):
+    import pytube
     from pytube import YouTube
     from pytube.innertube import _default_clients
 
