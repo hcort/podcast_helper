@@ -24,7 +24,7 @@ from slugify import slugify
 from abstract_podcast import AbstractPodcast
 from get_driver import get_driver
 from get_driver import hijack_cookies, get_driver_opera
-from mp3_tags import write_mp3_tags
+from mp3_tags import write_mp3_tags, check_file_type, mp4_to_mp3
 from utils import create_filename_and_folders, get_file_requests
 
 rgx_episode_id = re.compile('_rf_([0-9]+)_([0-9])')
@@ -101,33 +101,16 @@ def list_episodes(start_url=None, prev_page='', page_no=1):
     wait_for_cookies(webdriver, timeout, start_url)
     try:
         next_page_present = EC.presence_of_element_located(
-            (By.CLASS_NAME, 'title-wrapper'))
+            (By.CSS_SELECTOR, 'div.d-flex.mb-3  div.pr-md-2 > a'))
         WebDriverWait(webdriver, timeout).until(next_page_present)
-        all_titles_p = webdriver.find_elements(By.CLASS_NAME, 'title-wrapper')
-        all_description_buttons = webdriver.find_elements(By.CLASS_NAME, 'btn.btn-link.info')
-        all_short_descriptions = webdriver.find_elements(By.CLASS_NAME, 'audio-description')
-        for _, (title, button, short_description) in enumerate(zip(
+        all_titles_p = webdriver.find_elements(By.CSS_SELECTOR, 'div.d-flex.mb-3  div.pr-md-2 > a')
+        all_short_descriptions = webdriver.find_elements(By.CSS_SELECTOR, 'div.description-container > div.description')
+        for _, (title, short_description) in enumerate(zip(
                 all_titles_p,
-                all_description_buttons,
                 all_short_descriptions)):
-            link_element = title.find_element(By.TAG_NAME, 'a')
-            if not link_element:
-                continue
-            link = title.find_element(By.TAG_NAME, 'a').get_attribute('href')
+            link = title.get_attribute('href')
             description = short_description.text
-            try:
-                webdriver.execute_script("arguments[0].scrollIntoView();window.scrollBy(0,-200)", button)
-                time.sleep(1)
-                button.click()
-                element_present = EC.presence_of_element_located((By.CLASS_NAME, 'popover-content'))
-                WebDriverWait(webdriver, timeout).until(element_present)
-                description = webdriver.find_element(By.CLASS_NAME, 'popover-content').text
-                # button.click()
-                webdriver.find_element(By.TAG_NAME, 'body').click()
-                WebDriverWait(webdriver, timeout).until_not(element_present)
-            except Exception as err:
-                print(f'Error clicking description: {err}')
-            episodes_in_page['episode_list'].append({'url': link, 'desc': description})
+            episodes_in_page['episode_list'].append({'url': link, 'desc': f'{title.text}: {description}'})
         next_page_button = webdriver.find_elements(By.CSS_SELECTOR, 'ul.pagination > li > a')
         episodes_in_page['next_page'] = next_page_button[-1].get_attribute('href') if next_page_button else ''
     except TimeoutException as ex:
@@ -228,6 +211,16 @@ def get_episode(output_path, episode_url):
             redirect_url = f'https://www.ivoox.com{download_url}'
             mp3_filename = create_filename_and_folders(output_path, podcast_title, episode_title) + '.mp3'
             get_file_requests(requests_session, redirect_url, mp3_filename)
+            file_type = check_file_type(mp3_filename)
+            if file_type in ['MP4', 'M4A']:
+                # convierto el fichero
+                extension = '.'+file_type
+                mp4_filename = mp3_filename.replace('.mp3', extension)
+                if os.path.exists(mp4_filename):
+                    os.remove(mp4_filename)
+                os.rename(mp3_filename, mp4_filename)
+                mp4_path = os.sep.join(mp4_filename.split(os.sep)[:-1])
+                mp4_to_mp3(mp4_path, mp4_filename.split(os.sep)[-1].replace(extension, ''), extension=file_type, delete_mp4=False)
             image_filename = get_episode_cover_art(driver, output_path, slugify(podcast_title))
             write_mp3_tags(episode_title, podcast_title, podcast_date, image_filename, mp3_filename)
             return True

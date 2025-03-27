@@ -9,6 +9,19 @@ from mutagen.id3 import ID3, APIC
 from mutagen.mp3 import MP3
 
 
+def check_file_type(file_path):
+    try:
+        audio = File(file_path)
+        if audio is None:
+            print(f"The file {file_path} is not a supported audio/video format.")
+        else:
+            format_type = audio.__class__.__name__
+            return format_type
+    except Exception as e:
+        print(f"Error reading file {file_path}: {e}")
+    return None
+
+
 def mp4_to_mp3(path, mp4_name, extension='mp4', delete_mp4=False):
     mp4_file = os.path.join(path, f'{mp4_name}.{extension}')
     mp3_file = os.path.join(path, f'{mp4_name}.mp3')
@@ -51,7 +64,12 @@ def write_cover_art(art_filename, mp3_name):
 # writes some basic ID3 tags to the mp3 file
 def write_mp3_tags(entry_title, podcast_title, entry_date, art_filename, mp3_name):
     write_cover_art(art_filename, mp3_name)
-    audio = EasyID3(mp3_name)
+    # audio = EasyID3(mp3_name)
+    try:
+        audio = EasyID3(mp3_name)
+    except ValueError:
+        audio = File(mp3_name, easy=True)
+        audio.add_tags()
     audio['title'] = entry_title
     audio['artist'] = podcast_title
     audio['album'] = f'Podcast {podcast_title}'
