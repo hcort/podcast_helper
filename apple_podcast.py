@@ -9,6 +9,7 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
 from abstract_podcast import AbstractPodcast
 from get_driver import get_driver, hijack_cookies
 from utils import create_filename_and_folders, get_file_requests
@@ -38,29 +39,48 @@ class ApplePodcast(AbstractPodcast):
         self.__output_path = output_path
 
 
+current_scroll_script = 'var current_scroll=window.scrollY;return current_scroll;'
+max_scroll_script = 'var max_scroll=document.body.scrollHeight;return max_scroll;'
+scroll_to_x_script = 'window.scrollTo(0, {});var current_scroll=document.body.scrollHeight;return current_scroll;'
+scroll_script = 'window.scrollTo(0, document.body.scrollHeight);var lenOfPage=document.body.scrollHeight;return lenOfPage;'
+
+
+def keep_scrolling_loop(driver):
+    try:
+        num_sections = -1
+        old_num_sections = 0
+        while (num_sections != 0) and (num_sections != old_num_sections):
+            driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.END)
+            time.sleep(1)
+            old_num_sections = num_sections
+            num_sections = len(driver.find_elements(By.TAG_NAME, 'section'))
+    except Exception as err:
+        import traceback
+        print(traceback.format_exc())
+        print(err)
+    return False
+
+
 def get_all_episodes(start_url):
     # div.list-button button.link
     driver = get_driver()
     timeout = 10
     all_podcast_links = []
+    see_more_button_clicked = False
     try:
         keep_scrolling = True
         driver.get(start_url)
         while keep_scrolling:
-            try:
-                # scroll_element = driver.find_element(By.CLASS_NAME, "visibility-check")
-                # try:
-                #     more_episodes_button_presence = EC.presence_of_element_located(
-                #         (By.ID, 'didomi-notice-agree-button'))
-                #     WebDriverWait(driver, timeout).until(more_episodes_button_presence)
-                # except TimeoutException:
-                #     keep_scrolling = False
-                button = driver.find_element(By.CSS_SELECTOR, 'div.list-button button.link')
-                button.click()
-                time.sleep(2)
-            except NoSuchElementException:
-                keep_scrolling = False
-        all_podcast_entries = driver.find_elements(By.CSS_SELECTOR, 'ol.tracks a.link')
+            if not see_more_button_clicked:
+                try:
+                    button = driver.find_element(By.CSS_SELECTOR, 'div[data-testid="link-list"] > a[data-testid="click-action"]')
+                    button.click()
+                    time.sleep(2)
+                except NoSuchElementException:
+                    keep_scrolling = False
+            # cargados todos los episodios
+            keep_scrolling = keep_scrolling_loop(driver)
+        all_podcast_entries = driver.find_elements(By.CSS_SELECTOR, 'ol[data-testid="episodes-list"] a.link-action')
         all_podcast_links = [item.get_attribute('href') for item in all_podcast_entries]
     except TimeoutException as ex:
         print(f'Error accessing {start_url}: Timeout: {ex}')
@@ -71,25 +91,41 @@ def get_all_episodes(start_url):
 
 def get_episode(episode_url, output_path):
     driver = get_driver()
+
+
     if not episode_url or not driver:
         return False
     driver.get(episode_url)
     try:
-        podcast_json_data = driver.find_element(By.ID, podcast_json_id).get_attribute('innerHTML')
-        json_dict = json.loads(podcast_json_data)
-        json_dict = json.loads(json_dict[list(json_dict.keys())[0]])
-        episode_title = json_dict['d'][0]['attributes']['name']
-        episode_autor = json_dict['d'][0]['attributes']['artistName']
-        episode_date = json_dict['d'][0]['attributes']['releaseDateTime']
-        episode_mp3_url = json_dict['d'][0]['attributes']['assetUrl']
-        image_filename = driver.find_element(By.CLASS_NAME, 'we-artwork__image').get_attribute('src')
+        try:
+            # podcast data no longer in HTML
+            play_button = driver.find_element(By.CSS_SELECTOR, 'span[data-testid="button-icon-play"]')
+            play_button.click()
+            timeout = 50
+            pause_button_present = EC.presence_of_element_located((By.CSS_SELECTOR, 'span[data-testid="button-icon-pause"]'))
+            WebDriverWait(driver, timeout).until(pause_button_present)
+            pause_button = driver.find_element(By.CSS_SELECTOR, 'span[data-testid="button-icon-pause"]')
+            pause_button.click()
+        except TimeoutException as ex:
+            print(f'Error clicking play/pause button {episode_url} - {ex}')
+            return False
+        audio = driver.find_element(By.TAG_NAME, 'audio')
+        episode_mp3_url = audio.get_attribute('src')
+        js = driver.find_elements(By.CSS_SELECTOR, 'script[type="application/ld+json"]')
+        json_dict = None
+        for json_data in js:
+            if json_data.get_attribute('innerHTML').find('\"@type\":\"PodcastEpisode\"') >= 0:
+                json_dict = json.loads(json_data.get_attribute('innerHTML'))
+        if not json_dict:
+            print(f'Episode info not found {episode_url}')
+            return False
+        episode_title = json_dict['name']
+        episode_autor = json_dict['partOfSeries']['name']
+        episode_date = json_dict['datePublished']
         requests_session = hijack_cookies(driver)
         mp3_filename = create_filename_and_folders(output_path, episode_autor, episode_title) + '.mp3'
         get_file_requests(requests_session, episode_mp3_url, mp3_filename)
-        # redirected = requests_session.get(episode_mp3_url)
-        # with open(mp3_filename, mode='wb') as localfile:
-        #     localfile.write(redirected.content)
-        write_mp3_tags(episode_title, episode_autor, episode_date, image_filename, mp3_filename)
+        write_mp3_tags(episode_title, episode_autor, episode_date, '', mp3_filename)
         return True
     except Exception as err:
         print(f'{episode_url} - {driver.title} - {err}')
