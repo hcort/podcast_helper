@@ -9,7 +9,7 @@ from slugify import slugify
 
 from abstract_podcast import AbstractPodcast
 from mp3_tags import mp4_to_mp3, write_id3_tags_dict
-from utils import download_file_requests_stream
+from utils import download_file_requests_stream, get_download_folder
 
 
 class YoutubePodcast(AbstractPodcast):
@@ -19,6 +19,8 @@ class YoutubePodcast(AbstractPodcast):
 
     def __init__(self, output_path=None):
         self.__output_path = output_path
+        self.__po_token = ''
+        self.__visitor_data = ''
 
     def check_url(self, url_to_check: str) -> bool:
         return urlparse(url_to_check).hostname.find('youtube') != -1
@@ -27,38 +29,30 @@ class YoutubePodcast(AbstractPodcast):
         return list_videos_from_playlist(start_url)
 
     def get_episode(self, episode_url: str) -> bool:
-        return get_youtube_episode(output_path=self.__output_path, episode_url=episode_url)
+        return self.get_youtube_episode(episode_url=episode_url)
 
     def set_output_path(self, output_path: str):
         self.__output_path = output_path
 
-
-def save_image_from_url(thumbnail_url, output_path, nombre):
-    image_path = os.path.join(output_path, f'{nombre}.jpg')
-    if not os.path.exists(image_path):
-        download_file_requests_stream(file_url=thumbnail_url, file_name=image_path)
-    return image_path
-
-
-def get_youtube_episode_pytubefix(output_path, episode_url):
-    # PO TOKEN https://github.com/JuanBindez/pytubefix/pull/209
-    # poToken = MpQBh12Ld-5BeAqHZQ3rcKVhCY0dv3DMG0R2FmPFs3OXehNb8-IPEtkqF2-UeZE9tBm68W4_m2OdWwe8jrpVU0KMogtDqCn0zo0II44R360SFb7hygVQFzIZjtiLAxhkXuneLngyaqB9tA8PAWnhmvh1YdOjwSYSl86MiG7xxcSd-zeLfL3vdWEUK4QX7oOv1N0LDvAJwg==
-    potoken = 'MpQBh12Ld-5BeAqHZQ3rcKVhCY0dv3DMG0R2FmPFs3OXehNb8-IPEtkqF2-UeZE9tBm68W4_m2OdWwe8jrpVU0KMogtDqCn0zo0II44R360SFb7hygVQFzIZjtiLAxhkXuneLngyaqB9tA8PAWnhmvh1YdOjwSYSl86MiG7xxcSd-zeLfL3vdWEUK4QX7oOv1N0LDvAJwg=='
-    visitor_data = 'CgtwVzVIUzJ5OFpxayj035a-BjIiCgJFUxIcEhgSFhMLFBUWFwwYGRobHB0eHw4PIBAREiEgKw%3D%3D'
-    if not output_path:
-        raise FileNotFoundError
-    try:
-        import pytubefix
-        # yt = pytubefix.YouTube(episode_url)
-
-        yt = pytubefix.YouTube(episode_url, use_po_token=True)
-        stream = None
-        for i, st in enumerate(yt.streams.filter(mime_type='audio/mp4', only_audio=True)):
-        #     if st.is_default_audio_track:
-        #         stream = st
-        #         break
-        # if not stream:
-        #     raise Exception('No se ha encontrado audio por defecto')
+    def get_youtube_episode_pytubefix(self, episode_url):
+        #    Manually acquiring a PO Token from a browser for use when logged out
+        #     Open a browser and go to any video on YouTube Music or YouTube Embedded (e.g. https://www.youtube.com/embed/aqz-KE-bpKQ). Make sure you are not logged in to any account!
+        #     Open the developer console (F12), then go to the "Network" tab and filter by v1/player
+        #     Click the video to play and a player request will appear in the network tab
+        #     In the request payload JSON, find the PO Token at serviceIntegrityDimensions.poToken and save that value
+        #     In the request payload JSON, find the visitorData at context.client.visitorData and save that value
+        #     In the pytubefix code, pass the parameter use_po_token=True, to send the visitorData and PoToken:
+        # PO TOKEN https://github.com/JuanBindez/pytubefix/pull/209
+        if not self.__po_token:
+            print('Open https://www.youtube.com/embed/aqz-KE-bpKQ to get PO TOKEN and visitor data')
+            self.__po_token = input('PO TOKEN...')
+            self.__visitor_data = input('VISITOR DATA...')
+        if not self.__output_path:
+            raise FileNotFoundError
+        try:
+            import pytubefix
+            yt = pytubefix.YouTube(episode_url, use_po_token=True)
+            st = yt.streams.filter(mime_type='audio/mp4', only_audio=True).first()
             stream = st
             tag_dict = {
                 'artist': yt.author,
@@ -71,67 +65,31 @@ def get_youtube_episode_pytubefix(output_path, episode_url):
                 # 'description': f'{url}\n{yt.channel_url}\n{yt.description}',
                 'genre': 'Podcast'
             }
-            nombre = f'{slugify(stream.default_filename[:-4])}_{i}'
+            nombre = f'{slugify(stream.default_filename[:-4])}'
             extension = stream.default_filename[-3:]
-            stream.download(output_path=output_path, filename=f'{nombre}.{extension}')
-            cover_image_filename = save_image_from_url(yt.thumbnail_url, output_path, nombre)
-            mp3_filename = mp4_to_mp3(output_path, nombre, extension, delete_mp4=False)
+            download_folder = get_download_folder(self.__output_path, yt.author)
+            stream.download(output_path=download_folder, filename=f'{nombre}.{extension}')
+            cover_image_filename = save_image_from_url(yt.thumbnail_url, download_folder, nombre)
+            mp3_filename = mp4_to_mp3(download_folder, nombre, extension, delete_mp4=False)
             write_id3_tags_dict(mp3_filename, cover_image_filename, tag_dict)
-        return True
-    except pytubefix.exceptions.RegexMatchError as e:
-        print(f'URL no encontrada - {e}')
-    except Exception as err:
-        print(f'Unexpected {err}, {type(err)}')
-    except BaseException as err:
-        print(f'Unexpected {err}, {type(err)}')
-    return False
+            return True
+        except pytubefix.exceptions.RegexMatchError as e:
+            print(f'URL no encontrada - {e}')
+        except Exception as err:
+            print(f'Unexpected {err}, {type(err)}')
+        except BaseException as err:
+            print(f'Unexpected {err}, {type(err)}')
+        return False
+
+    def get_youtube_episode(self, episode_url):
+        return self.get_youtube_episode_pytubefix(episode_url)
 
 
-def get_youtube_episode(output_path, episode_url):
-    use_fix = True
-    if use_fix:
-        return get_youtube_episode_pytubefix(output_path, episode_url)
-    else:
-        return get_youtube_episode_pytube(output_path, episode_url)
-
-
-def get_youtube_episode_pytube(output_path, episode_url):
-    import pytube
-    from pytube import YouTube
-    from pytube.innertube import _default_clients
-
-    _default_clients["ANDROID"]["context"]["client"]["clientVersion"] = "19.08.35"
-    _default_clients["ANDROID_MUSIC"] = _default_clients["ANDROID"]
-    if not output_path:
-        raise FileNotFoundError
-    try:
-        yt = pytube.YouTube(episode_url)
-        stream = yt.streams.filter(mime_type='audio/mp4', only_audio=True).desc().first()
-        tag_dict = {
-            'artist': yt.author,
-            'album': f'Podcast {yt.author}',
-            'title': yt.title,
-            'date': str(yt.publish_date),
-            'length': yt.length,
-            'website': yt.channel_url,
-            # 'comment': f'{url}\n{yt.channel_url}\n{yt.description}',
-            # 'description': f'{url}\n{yt.channel_url}\n{yt.description}',
-            'genre': 'Podcast'
-        }
-        nombre = slugify(stream.default_filename[:-4])
-        extension = stream.default_filename[-3:]
-        stream.download(output_path=output_path, filename=f'{nombre}.{extension}')
-        cover_image_filename = save_image_from_url(yt.thumbnail_url, output_path, nombre)
-        mp3_filename = mp4_to_mp3(output_path, nombre, extension, delete_mp4=True)
-        write_id3_tags_dict(mp3_filename, cover_image_filename, tag_dict)
-        return True
-    except pytube.exceptions.RegexMatchError as e:
-        print(f'URL no encontrada - {e}')
-    except Exception as err:
-        print(f'Unexpected {err}, {type(err)}')
-    except BaseException as err:
-        print(f'Unexpected {err}, {type(err)}')
-    return False
+def save_image_from_url(thumbnail_url, output_path, nombre):
+    image_path = os.path.join(output_path, f'{nombre}.jpg')
+    if not os.path.exists(image_path):
+        download_file_requests_stream(file_url=thumbnail_url, file_name=image_path)
+    return image_path
 
 
 def list_videos_from_playlist(playlist_url):
