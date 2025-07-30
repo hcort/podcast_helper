@@ -66,7 +66,7 @@ def hijack_cookies(driver):
     return s
 
 
-def get_driver(headless=True):
+def get_driver(headless=False):
     global global_selenium_driver
     use_opera = False
     if headless:
@@ -81,11 +81,14 @@ def get_driver(headless=True):
             # service = Service(executable_path=firefox_loc)
             # return webdriver.Firefox(service=service)
             options = webdriver.FirefoxOptions()
+            options.set_preference("media.eme.enabled", True)
+            options.set_preference("media.gmp-manager.updateEnabled", True)
+
             options.binary_location = firefox_loc
             # return webdriver.Firefox(timeout=30, firefox_options=options)
             log_path = os.path.join(os.path.join(os.getcwd(), 'log'), 'geckodriver.log')
             # global_selenium_driver = webdriver.Firefox()
-            global_selenium_driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()))
+            global_selenium_driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=options)
     return global_selenium_driver
 
 
