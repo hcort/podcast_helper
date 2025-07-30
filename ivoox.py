@@ -100,10 +100,12 @@ def list_episodes(start_url=None, prev_page='', page_no=1):
     webdriver.get(start_url)
     wait_for_cookies(webdriver, timeout, start_url)
     try:
+        # selector CSS de los títulos de cada programa con el enlace al episodio concreto
+        link_to_episode_selector = 'h3 > a'
         next_page_present = EC.presence_of_element_located(
-            (By.CSS_SELECTOR, 'div.d-flex.mb-3  div.pr-md-2 > a'))
+            (By.CSS_SELECTOR, link_to_episode_selector))
         WebDriverWait(webdriver, timeout).until(next_page_present)
-        all_titles_p = webdriver.find_elements(By.CSS_SELECTOR, 'div.d-flex.mb-3  div.pr-md-2 > a')
+        all_titles_p = webdriver.find_elements(By.CSS_SELECTOR, link_to_episode_selector)
         all_short_descriptions = webdriver.find_elements(By.CSS_SELECTOR, 'div.description-container > div.description')
         for _, (title, short_description) in enumerate(zip(
                 all_titles_p,
@@ -111,8 +113,8 @@ def list_episodes(start_url=None, prev_page='', page_no=1):
             link = title.get_attribute('href')
             description = short_description.text
             episodes_in_page['episode_list'].append({'url': link, 'desc': f'{title.text}: {description}'})
-        next_page_button = webdriver.find_elements(By.CSS_SELECTOR, 'ul.pagination > li > a')
-        episodes_in_page['next_page'] = next_page_button[-1].get_attribute('href') if next_page_button else ''
+        next_page_button = webdriver.find_element(By.LINK_TEXT, '')
+        episodes_in_page['next_page'] = next_page_button.get_attribute('href') if next_page_button else ''
     except TimeoutException as ex:
         print(f'Error accessing {webdriver.current_url}: Timeout: {str(ex)}')
     except Exception as ex:
@@ -157,14 +159,12 @@ def get_episode_cover_art(webdriver, output_dir, podcast_title):
 def remove_promo_popup(driver):
     timeout = 5
     try:
-        promo_layer = EC.presence_of_element_located((By.ID, 'promo-starter'))
-        WebDriverWait(driver, timeout).until(promo_layer)
-        promo_layer = driver.find_element(By.ID, 'promo-starter')
+        promo_layer = driver.find_element(By.CSS_SELECTOR, 'div.modal[role="dialog"]')
         driver.execute_script("""var element = arguments[0];
                     element.innerHTML = '';""", promo_layer)
         promo_layer.click()
         time.sleep(5)
-    except TimeoutException:
+    except Exception:
         pass
 
 
@@ -179,7 +179,7 @@ def get_episode(output_path, episode_url):
         remove_promo_popup(driver)
 
         try:
-            if driver.find_element(By.ID, 'apoyar-btn'):
+            if driver.find_element(By.CLASS_NAME, 'btn-outline-fans'):
                 print(f'The episode {episode_url} is behind the paywall - Can\'t download')
                 return False
         except Exception:
@@ -194,7 +194,7 @@ def get_episode(output_path, episode_url):
         btn_dnl.click()
         time.sleep(1)
 
-        div_pop_up = btn_dnl.find_element(By.XPATH, './preceding-sibling::div')
+        div_pop_up = btn_dnl.find_element(By.XPATH, './following-sibling::div')
         div_pop_up_links = div_pop_up.find_elements(By.TAG_NAME, 'a')
         div_pop_up_links[2].click()
 
