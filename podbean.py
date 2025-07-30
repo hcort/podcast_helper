@@ -61,8 +61,15 @@ def get_episode(episode_url, output_path):
     driver.get(episode_url)
     try:
         time.sleep(5)
-        podcast_json_data = driver.find_elements(By.TAG_NAME, 'script')[3].get_attribute('innerHTML')
-        json_dict = json.loads(podcast_json_data)
+        json_dict = None
+        podcast_json_data = driver.find_elements(By.TAG_NAME, 'script')
+        for p in podcast_json_data:
+            json_text = p.get_attribute('innerHTML')
+            if json_text.find('associatedMedia') >= 0 and json_text.find('contentUrl') >= 0:
+                json_dict = json.loads(json_text)
+        if not json_dict:
+            print(f'{episode_url} - {driver.title} - JSON data not found')
+            return None
         episode_title = json_dict['name']
         episode_autor = json_dict['partOfSeries']['name']
         # episode_description = json_dict['description']
