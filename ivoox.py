@@ -179,7 +179,9 @@ def get_episode(output_path, episode_url):
         remove_promo_popup(driver)
 
         try:
-            if driver.find_element(By.CLASS_NAME, 'btn-outline-fans'):
+            # check if the Play button is free or paywalled
+            play_btn = driver.find_elements(By.CSS_SELECTOR, 'button.btn-play-1')
+            if play_btn.get_attribute('class').find('btn-fans') >= 0:
                 print(f'The episode {episode_url} is behind the paywall - Can\'t download')
                 return False
         except Exception:
@@ -191,10 +193,12 @@ def get_episode(output_path, episode_url):
         episode_title = driver.find_element(By.CLASS_NAME, 'h2').text
 
         btn_dnl = driver.find_element(By.CSS_SELECTOR, 'div.play-features-1 div.stat  button')
-        btn_dnl.click()
+        WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'div.play-features-1 div.stat  button')))
+        btn_dnl_parent = btn_dnl.find_element(By.XPATH, '..')
+        btn_dnl_parent.click()
         time.sleep(1)
 
-        div_pop_up = btn_dnl.find_element(By.XPATH, './following-sibling::div')
+        div_pop_up = btn_dnl.find_element(By.XPATH, './preceding-sibling::div')
         div_pop_up_links = div_pop_up.find_elements(By.TAG_NAME, 'a')
         div_pop_up_links[2].click()
 
