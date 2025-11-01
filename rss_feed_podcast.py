@@ -45,7 +45,7 @@ class RssFeedPodcast(AbstractPodcast):
             all_episodes.append(item['link'])
             if self.__download_during_list:
                 self._parse_feed_item(item, feed)
-        return all_episodes
+        return [] if self.__download_during_list else all_episodes
 
     def _get_episode(self, episode_url):
         soup = get_soup_from_requests(episode_url)
@@ -63,7 +63,15 @@ class RssFeedPodcast(AbstractPodcast):
         episode_title = item['title']
         podcast_title = feed['feed']['title']
         podcast_date = item['published']
-        podcast_mp3_url = item['links'][1]['href']
+        podcast_mp3_url = None
+        for l in item['links']:
+            url = l['href']
+            # FIXME not only mp3 support
+            if url.find('.mp3') >= 0:
+                podcast_mp3_url = url
+        if not podcast_mp3_url:
+            print(f'URL not found in RSS - {item}')
+            return
         mp3_filename = create_filename_and_folders(self.__output_path, slugify(podcast_title), episode_title) + '.mp3'
         if os.path.isfile(mp3_filename):
             return
@@ -78,3 +86,12 @@ class WeirdStudiesPodcast(RssFeedPodcast):
 
     def check_url(self, url_to_check: str) -> bool:
         return url_to_check.find('weirdstudies') != -1
+
+
+class AlzaboSoupPodcast(RssFeedPodcast):
+    """
+        implements AbstractPodcast for Weird Studies
+    """
+
+    def check_url(self, url_to_check: str) -> bool:
+        return url_to_check.find('alzabosoup') != -1
