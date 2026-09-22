@@ -11,6 +11,15 @@ from abstract_podcast import AbstractPodcast
 from mp3_tags import mp4_to_mp3, write_id3_tags_dict
 from utils import download_file_requests_stream, get_download_folder
 
+po_token_json = {
+    'po_token': '',
+    'visitor_data': ''
+}
+
+
+def po_token_verifier():
+    return po_token_json['visitor_data'], po_token_json['po_token']
+
 
 class YoutubePodcast(AbstractPodcast):
     """
@@ -19,8 +28,6 @@ class YoutubePodcast(AbstractPodcast):
 
     def __init__(self, output_path=None):
         self.__output_path = output_path
-        self.__po_token = ''
-        self.__visitor_data = ''
 
     def check_url(self, url_to_check: str) -> bool:
         return urlparse(url_to_check).hostname.find('youtube') != -1
@@ -43,15 +50,17 @@ class YoutubePodcast(AbstractPodcast):
         #     In the request payload JSON, find the visitorData at context.client.visitorData and save that value
         #     In the pytubefix code, pass the parameter use_po_token=True, to send the visitorData and PoToken:
         # PO TOKEN https://github.com/JuanBindez/pytubefix/pull/209
-        if not self.__po_token:
+        use_po_token = True
+        if not po_token_json['po_token'] and use_po_token:
             print('Open https://www.youtube.com/embed/aqz-KE-bpKQ to get PO TOKEN and visitor data')
-            self.__po_token = input('PO TOKEN...')
-            self.__visitor_data = input('VISITOR DATA...')
+            po_token_json['po_token'] = input('PO TOKEN...')
+            po_token_json['visitor_data'] = input('VISITOR DATA...')
         if not self.__output_path:
             raise FileNotFoundError
         try:
             import pytubefix
-            yt = pytubefix.YouTube(episode_url, use_po_token=True)
+            # yt = pytubefix.YouTube(episode_url, use_po_token=use_po_token, po_token_verifier=po_token_verifier)
+            yt = pytubefix.YouTube(episode_url, 'WEB')
             st = yt.streams.filter(mime_type='audio/mp4', only_audio=True).first()
             stream = st
             tag_dict = {
