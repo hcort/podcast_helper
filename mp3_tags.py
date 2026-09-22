@@ -2,7 +2,7 @@
     Methods to handle the mp3 ID3 tags
 """
 import os
-import moviepy.editor as mp
+from moviepy import AudioFileClip
 from mutagen.easyid3 import EasyID3
 from mutagen.id3 import APIC, COMM, ID3, ID3NoHeaderError, TXXX, USLT, WOAR, WOAS
 from mutagen.mp3 import MP3
@@ -26,8 +26,8 @@ def mp4_to_mp3(path, mp4_name, extension='mp4', delete_mp4=False):
     mp4_file = os.path.join(path, f'{mp4_name}.{extension}')
     mp3_file = os.path.join(path, f'{mp4_name}.mp3')
     if not os.path.exists(mp3_file):
-        clip = mp.AudioFileClip(mp4_file)
-        clip.write_audiofile(mp3_file)
+        with AudioFileClip(mp4_file) as clip:
+            clip.write_audiofile(mp3_file)
     if delete_mp4:
         os.remove(mp4_file)
     return mp3_file

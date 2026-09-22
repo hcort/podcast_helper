@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import os
 import shutil
 import sys
@@ -13,7 +12,6 @@ import yt_dlp
 
 from abstract_podcast import AbstractPodcast
 from mp3_tags import write_mp3_tags
-
 
 YOUTUBE_HOSTS = {"youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"}
 SUPPORTED_COOKIE_BROWSERS = {
