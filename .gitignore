@@ -1,6 +1,9 @@
-/venv/
+/venv*/
 /.idea/
 /output/
+/res/
+/log/
+/tests/
 downloads.sqlite3*
 
 /docker/compose.local.json
