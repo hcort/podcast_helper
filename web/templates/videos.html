@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Descargar vídeos · Podcast Helper{% endblock %}
+{% block content %}
+<header><p class="eyebrow">TU BIBLIOTECA DE VÍDEO</p><h1>Descargar vídeos</h1>
+<p>Guarda vídeos de YouTube con su audio en tu carpeta de vídeos.</p></header>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" data-download-form><section>
+<label for="video_urls">Enlaces de YouTube</label>
+<p id="video_hint">Pega un enlace por línea o sepáralos con espacios.</p>
+<textarea id="video_urls" name="video_urls" rows="10" aria-describedby="video_hint" required>{{ video_urls }}</textarea>
+<p>Los vídeos se guardan directamente en la carpeta configurada, con su título como nombre y sin carpetas de canales. Los caracteres no válidos se adaptan al sistema de archivos.</p>
+<button type="submit">Descargar vídeos</button>
+<p>La descarga puede tardar varios minutos. Espera a que aparezcan los resultados.</p>
+</section></form>
+{% if results is defined %}{% include 'results.html' %}{% endif %}
+{% endblock %}

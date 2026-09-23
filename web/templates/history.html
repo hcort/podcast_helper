@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Historial de podcasts · Podcast Helper{% endblock %}
+{% block content %}
+<header><p class="eyebrow">TU BIBLIOTECA DE AUDIO</p><h1>Podcasts descargados</h1>
+<p>{{ total }} registros · {{ groups|length }} autores</p>
+<p>Despliega un autor para consultar sus episodios. Borrar un registro conserva el archivo y permite volver a descargar el episodio si no quedan otros registros del mismo autor y título.</p></header>
+{% for message in get_flashed_messages() %}<p class="notice" role="status">{{ message }}</p>{% endfor %}
+{% for author, episodes in groups.items() %}
+<details class="author-group">
+<summary>{{ author }} <span>({{ episodes|length }} episodios)</span></summary>
+<ul class="history-list">
+{% for episode in episodes %}<li>
+<h2>{{ episode.title }}</h2>
+<dl class="file-details">
+<dt>Archivo registrado</dt><dd>{{ episode.file_path }}</dd>
+<dt>Fecha (UTC)</dt><dd>{{ episode.downloaded_at }}</dd>
+<dt>Tamaño</dt><dd>{{ '%.2f'|format(episode.file_size / 1048576) }} MB</dd>
+{% if episode.duration_seconds %}<dt>Duración</dt><dd>{{ '%.0f'|format(episode.duration_seconds) }} segundos</dd>{% endif %}
+</dl>
+<form method="post" action="{{ url_for('history.delete', record_id=episode.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+<button class="delete-record" type="submit" aria-label="Borrar de la base de datos: {{ episode.title }}">Borrar de la base de datos</button>
+</form>
+</li>{% endfor %}
+</ul>
+</details>
+{% else %}<section><p>No hay podcasts registrados todavía.</p><a href="{{ url_for('podcasts.index') }}">Descargar podcasts</a></section>{% endfor %}
+{% endblock %}

@@ -1,6 +1,7 @@
 """Podcast operations shared by the CLI and web, without Flask dependencies."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from services.file_details import file_details
 from threading import Lock
 from urllib.parse import urlsplit
 from get_driver import close_and_remove_driver
@@ -20,6 +21,7 @@ class EpisodeResult:
     url: str
     error: str | None = None
     skipped: bool = False
+    files: list[dict] = field(default_factory=list)
 
 class PodcastService:
     def __init__(self, output_path, history_path=None):
@@ -54,14 +56,16 @@ class PodcastService:
                 self.output_path.mkdir(parents=True, exist_ok=True)
                 history = DownloadHistory(self.history_path)
                 registry = create_abstract_podcast_list(str(self.output_path))
-                for url in urls:
+                for index, url in enumerate(urls, 1):
+                    print(f'[{index}/{len(urls)}] Descargando {url}', flush=True)
                     try:
                         provider = self._provider(registry, url)
                         before = mp3_snapshot(self.output_path)
                         with checking_download(history) as check:
                             success = provider.get_episode(url)
                         if check.skipped:
-                            results.append(EpisodeResult(url, skipped=True))
+                            results.append(EpisodeResult(url, skipped=True, files=history.episode_files(check.podcast, check.title)))
+                            print('Ya descargado: se omite.', flush=True)
                             continue
                         if success is False:
                             raise RuntimeError('El proveedor no pudo descargar el episodio.')
@@ -69,9 +73,11 @@ class PodcastService:
                         changed = [path for path, stat in after.items() if before.get(path) != stat]
                         if changed:
                             history.record_files(changed, episode_url=url)
-                        results.append(EpisodeResult(url))
+                        results.append(EpisodeResult(url, files=[file_details(path) for path in changed]))
+                        print(f'Finalizado: {url}', flush=True)
                     except Exception as err:
                         results.append(EpisodeResult(url, str(err)))
+                        print(f'Error - {url} - {err}', flush=True)
                 return results
             finally:
                 close_and_remove_driver()

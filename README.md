@@ -213,3 +213,34 @@ docker compose -f docker/compose.yaml -f docker/compose.local.json up --build -d
 Añade `--sftp-key ruta/clave.pub` si también quieres activar SFTP. El comando
 reemplaza el override anterior: incluye todas las opciones que quieras conservar.
 Las descargas de vídeo no se registran en el historial de MP3 de podcasts.
+
+## Progreso y detalles en la web
+
+Ambas vistas muestran la salida de consola del lote mientras se descarga,
+con inicio, finalización y errores por URL. Los proveedores que imprimen
+porcentajes, velocidad o conversión muestran también esos mensajes. El panel
+requiere JavaScript; sin JavaScript se conserva el formulario tradicional.
+
+Los resultados incluyen ruta física, título, tamaño y metadatos disponibles
+(autor/podcast, álbum, duración, publicación y fecha). Para descargas omitidas
+se consulta el historial y se indica si el archivo ya no existe. Las rutas de
+los ZIP se identifican como temporales y se eliminan tras el envío, conservando
+el historial. En Docker las rutas mostradas pertenecen al contenedor.
+
+El progreso se mantiene en memoria durante una hora, con el registro completo en un archivo temporal por lote y un máximo de
+100 lotes. El navegador recibe bloques incrementales sin recortar el inicio. Usa un único worker con al menos cuatro threads
+(como la configuración Docker incluida); se admiten dos lotes con progreso
+simultáneos para dejar capacidad a las consultas. Reiniciar el servidor borra
+el progreso en memoria. El audio mantiene la serialización del driver Selenium.
+
+## Consultar el historial
+
+La vista `/history`, accesible desde **Historial** en el menú, agrupa los registros
+por autor/podcast con grupos plegables. Cada episodio muestra su ruta registrada,
+fecha, tamaño y duración disponible. **Borrar de la base de datos** elimina solo
+esa fila: el archivo físico permanece. Si no quedan registros del mismo autor y
+título, el episodio deja de considerarse duplicado. Las operaciones de borrado
+usan POST y un token de sesión contra solicitudes cruzadas.
+
+Opcionalmente configura `FLASK_SECRET_KEY` con un secreto estable para mantener
+las sesiones al reiniciar; sin él, recarga la página del historial tras un reinicio.

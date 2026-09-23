@@ -1,0 +1,17 @@
+<section id="download-results" aria-label="Resultados"><h2>Resultados</h2>
+{% if saved_folder %}<p>Procesamiento terminado en: <strong>{{ saved_folder }}</strong></p>{% endif %}
+{% if temporary %}<p>Archivos incluidos en el ZIP. Las rutas temporales se eliminan después del envío.</p>{% endif %}
+<ul>{% for result in results %}<li><strong>{{ 'Error' if result.error else ('Ya descargado' if result.skipped else 'Procesado') }}</strong> — {{ result.url }}
+{% if result.error %}<p class="error">{{ result.error }}</p>{% endif %}
+{% for file in result.files %}<dl class="file-details">
+<dt>Archivo físico{% if temporary %} (temporal){% endif %}</dt><dd>{{ file.file_path }}</dd>
+{% if not file.available %}<dt>Disponibilidad</dt><dd>Registrado en el historial; ya no está en esta ruta.</dd>{% endif %}
+{% if file.title %}<dt>Título</dt><dd>{{ file.title }}</dd>{% endif %}
+{% if file.podcast %}<dt>Podcast / autor</dt><dd>{{ file.podcast }}</dd>{% endif %}
+{% if file.album %}<dt>Álbum</dt><dd>{{ file.album }}</dd>{% endif %}
+{% if file.file_size is defined %}<dt>Tamaño</dt><dd>{{ '%.2f'|format(file.file_size / 1048576) }} MB</dd>{% endif %}
+{% if file.duration_seconds %}<dt>Duración</dt><dd>{{ '%.0f'|format(file.duration_seconds) }} segundos</dd>{% endif %}
+{% if file.published_at %}<dt>Publicación</dt><dd>{{ file.published_at }}</dd>{% endif %}
+{% if file.downloaded_at %}<dt>Fecha del archivo / registro (UTC)</dt><dd>{{ file.downloaded_at }}</dd>{% endif %}
+</dl>{% else %}{% if not result.error %}<p>No se ha identificado un archivo nuevo para este enlace.</p>{% endif %}{% endfor %}
+</li>{% endfor %}</ul></section>

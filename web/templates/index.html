@@ -4,7 +4,7 @@
 <header><p class="eyebrow">TU BIBLIOTECA DE AUDIO</p><h1>Podcast Helper</h1>
 <p>Busca episodios de un podcast o pega los enlaces que quieras descargar.</p></header>
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-<form method="post">
+<form method="post" data-download-form>
 <section><h2>1. Buscar episodios</h2>
 <label for="podcast_url">Dirección del podcast</label>
 <input id="podcast_url" name="podcast_url" type="url" value="{{ podcast_url }}" placeholder="https://…">
@@ -20,8 +20,5 @@
 <button name="action" value="download">Descargar episodios</button>
 <p>La descarga puede tardar varios minutos. Espera a que aparezcan los resultados.</p>
 </section></form>
-{% if results is defined %}<section aria-label="Resultados"><h2>Resultados</h2>
-{% if saved_folder %}<p>Procesamiento terminado en: <strong>{{ saved_folder }}</strong></p>{% else %}<p>No se generaron archivos para descargar.</p>{% endif %}
-<ul>{% for result in results %}<li><strong>{{ 'Error' if result.error else ('Ya descargado' if result.skipped else 'Procesado') }}</strong> — {{ result.url }}{% if result.error %}<p class="error">{{ result.error }}</p>{% endif %}</li>{% endfor %}</ul>
-</section>{% endif %}
+{% if results is defined %}{% include 'results.html' %}{% endif %}
 {% endblock %}

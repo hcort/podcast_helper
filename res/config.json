@@ -1,6 +1,6 @@
 {
-  "output_folder": "F:\\bkp\\podcast",
-  "video_folder": "F:\\bkp\\videos",
+  "output_folder": "F:\\podcast",
+  "video_folder": "F:\\videos",
   "firefox_location":
   {
     "windows": "C:\\Program Files\\Mozilla Firefox\\firefox.exe",

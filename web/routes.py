@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from flask import Blueprint, current_app, render_template, request, send_file
 from services.podcasts import PodcastService
 from utils import read_config_object
+from web.progress import publish_results
 
 bp = Blueprint('podcasts', __name__)
 
@@ -28,6 +29,8 @@ def temporary_download(urls, context):
         errors = [f'{result.url}: {result.error}' for result in context['results'] if result.error]
         if errors:
             (folder / 'errores.txt').write_text('\n'.join(errors), encoding='utf-8')
+        print('Comprimiendo archivos…', flush=True)
+        publish_results(render_template('results.html', results=context['results'], temporary=True))
         archive = shutil.make_archive(str(root / 'podcasts'), 'zip', folder)
         response = send_file(archive, mimetype='application/zip', as_attachment=True, download_name='podcasts.zip')
         # Ensure Werkzeug closes the file before removing it (also on Windows).

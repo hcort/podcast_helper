@@ -17,6 +17,8 @@ from pathlib import Path
 class DownloadCheck:
     history: object
     skipped: bool = False
+    podcast: str | None = None
+    title: str | None = None
 
 
 _active_check = ContextVar('download_check', default=None)
@@ -37,6 +39,7 @@ def already_downloaded(podcast, title):
     check = _active_check.get()
     if check is None:
         return False
+    check.podcast, check.title = podcast, title
     check.skipped = check.history.contains_episode(podcast, title)
     return check.skipped
 
@@ -93,6 +96,26 @@ class DownloadHistory:
         with closing(self._connect()) as db:
             return db.execute('SELECT 1 FROM downloads WHERE podcast = ? AND title = ?',
                               (podcast, title)).fetchone() is not None
+
+    def episode_files(self, podcast, title):
+        with closing(self._connect()) as db:
+            db.row_factory = sqlite3.Row
+            records = [dict(row) for row in db.execute(
+                'SELECT * FROM downloads WHERE podcast = ? AND title = ?', (podcast, title))]
+        for record in records:
+            record['available'] = Path(record['file_path']).is_file()
+        return records
+
+    def list_downloads(self):
+        with closing(self._connect()) as db:
+            db.row_factory = sqlite3.Row
+            return [dict(row) for row in db.execute(
+                'SELECT * FROM downloads ORDER BY podcast COLLATE NOCASE, title COLLATE NOCASE, id')]
+
+    def delete_download(self, record_id):
+        """Delete only the selected database row; never touch the media file."""
+        with closing(self._connect()) as db, db:
+            return db.execute('DELETE FROM downloads WHERE id = ?', (record_id,)).rowcount > 0
 
     def record_files(self, filenames, episode_url=None, imported=False):
         # Parse every file before committing to avoid recording partial results.
