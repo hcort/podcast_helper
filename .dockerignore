@@ -9,3 +9,7 @@ res/*
 log
 output
 tests
+
+docker/compose.local.json
+
+podcast_sftp*

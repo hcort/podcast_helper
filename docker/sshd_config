@@ -1,0 +1,18 @@
+Port 22
+HostKey /var/lib/podcast-ssh/ssh_host_ed25519_key
+PidFile /run/sshd.pid
+UsePAM no
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+AuthenticationMethods publickey
+AuthorizedKeysFile /etc/ssh/podcast_authorized_keys
+AllowUsers podcast
+DisableForwarding yes
+PermitTTY no
+PermitTunnel no
+PermitUserRC no
+Subsystem sftp internal-sftp
+ChrootDirectory /srv/sftp
+ForceCommand internal-sftp -R -d /downloads

@@ -2,3 +2,8 @@
 /.idea/
 /output/
 downloads.sqlite3*
+
+/docker/compose.local.json
+
+/podcast_sftp
+/podcast_sftp.pub
