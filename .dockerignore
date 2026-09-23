@@ -1,0 +1,11 @@
+.git
+.idea
+venv*
+__pycache__
+**/__pycache__
+*.exe
+res/*
+!res/config.json
+log
+output
+tests

@@ -1,0 +1,20 @@
+:root { font-family: system-ui, sans-serif; color: #193332; background: #f1f5f2; }
+body { margin: 0; }
+main { max-width: 850px; margin: 48px auto; padding: 0 20px; }
+header { margin-bottom: 32px; }
+h1 { font-size: clamp(2rem, 6vw, 3rem); margin: 8px 0; }
+h2 { font-size: 1.25rem; margin-top: 0; }
+.eyebrow { letter-spacing: .14em; font-size: .75rem; font-weight: 700; }
+section { background: white; border: 1px solid #d6e1db; border-radius: 16px; padding: 24px; margin-bottom: 24px; }
+label { display: block; font-weight: 600; margin-bottom: 10px; }
+input, textarea { box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #8baba0; border-radius: 8px; font: inherit; }
+textarea { resize: vertical; }
+button, .download { display: inline-block; margin-top: 16px; padding: 12px 20px; background: #126454; color: white; border: 0; border-radius: 8px; font: inherit; cursor: pointer; }
+button:hover, .download:hover { background: #0a493d; }
+:focus-visible { outline: 3px solid #c78522; outline-offset: 3px; }
+p { line-height: 1.6; }
+.error { color: #a52626; overflow-wrap: anywhere; }
+li { margin: 16px 0; overflow-wrap: anywhere; }
+
+.checkbox { margin-top: 18px; display: flex; align-items: center; gap: 10px; }
+.checkbox input { width: auto; }

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Podcast Helper</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body><main>
+<header><p class="eyebrow">TU BIBLIOTECA DE AUDIO</p><h1>Podcast Helper</h1>
+<p>Busca episodios de un podcast o pega los enlaces que quieras descargar.</p></header>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post">
+<section><h2>1. Buscar episodios</h2>
+<label for="podcast_url">Dirección del podcast</label>
+<input id="podcast_url" name="podcast_url" type="url" value="{{ podcast_url }}" placeholder="https://…">
+<button name="action" value="list">Listar episodios</button>
+{% if listed %}<p role="status">Listado completado. Revisa los enlaces antes de descargarlos.{% if not episode_text %} No se encontraron episodios.{% endif %}</p>{% endif %}
+</section>
+<section><h2>2. Descargar episodios</h2>
+<label for="episode_urls">Enlaces de los episodios</label>
+<p id="hint">Pega un enlace por línea o sepáralos con espacios. Puedes editar el listado.</p>
+<textarea id="episode_urls" name="episode_urls" rows="10" aria-describedby="hint">{{ episode_text }}</textarea>
+<label class="checkbox" for="zip_download"><input type="checkbox" id="zip_download" name="zip_download" {% if zip_download %}checked{% endif %}> Descargar como ZIP temporal</label>
+<p>Marcado: descarga un ZIP y elimina los temporales al finalizar el envío. Sin marcar: guarda en la carpeta de la aplicación CLI. Si el ZIP contiene descargas fallidas, incluye un archivo errores.txt.</p>
+<button name="action" value="download">Descargar episodios</button>
+<p>La descarga puede tardar varios minutos. Espera a que aparezcan los resultados.</p>
+</section></form>
+{% if results is defined %}<section aria-label="Resultados"><h2>Resultados</h2>
+{% if saved_folder %}<p>Procesamiento terminado en: <strong>{{ saved_folder }}</strong></p>{% else %}<p>No se generaron archivos para descargar.</p>{% endif %}
+<ul>{% for result in results %}<li><strong>{{ 'Error' if result.error else ('Ya descargado' if result.skipped else 'Procesado') }}</strong> — {{ result.url }}{% if result.error %}<p class="error">{{ result.error }}</p>{% endif %}</li>{% endfor %}</ul>
+</section>{% endif %}
+</main></body></html>

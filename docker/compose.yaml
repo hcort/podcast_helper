@@ -1,0 +1,13 @@
+services:
+  podcast-helper:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "127.0.0.1:5000:5000"
+    volumes:
+      - podcast-output:/app/output
+    shm_size: 1gb
+    restart: unless-stopped
+volumes:
+  podcast-output:
