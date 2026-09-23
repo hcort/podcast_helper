@@ -187,3 +187,29 @@ La limpieza requiere que el proceso siga vivo; un cierre forzado puede dejar
 restos en el directorio temporal del sistema.
 
 Referencias de la configuración Docker/SFTP: [montajes Docker](https://docs.docker.com/engine/storage/bind-mounts/) y [configuración OpenSSH](https://man.openbsd.org/sshd_config).
+
+## Vista de vídeos
+
+El menú superior enlaza `/podcasts` y `/videos`. `/` sigue mostrando podcasts.
+En `/videos`, pega URLs de YouTube separadas por líneas o espacios. Se procesa
+cada enlace aunque otro falle y se muestran los resultados individualmente.
+
+Los vídeos con audio se guardan directamente en `video_folder` de
+`res/config.json`, sin subdirectorios por canal. El nombre es el título de
+YouTube y la extensión: no se añade el canal ni el ID. Los caracteres no válidos
+se normalizan y los títulos muy largos se recortan a 180 bytes. Un archivo
+existente con el mismo nombre no se sobrescribe; vídeos diferentes con títulos
+idénticos pueden coincidir en el mismo destino. La carpeta raíz se crea si falta.
+
+En Docker, `VIDEO_FOLDER` apunta al volumen persistente `/srv/sftp/videos`,
+accesible también por SFTP en `/videos`. Para montar la carpeta local de
+`video_folder` (junto con la de podcasts):
+
+```sh
+python docker/configure.py --local-output --local-videos
+docker compose -f docker/compose.yaml -f docker/compose.local.json up --build -d
+```
+
+Añade `--sftp-key ruta/clave.pub` si también quieres activar SFTP. El comando
+reemplaza el override anterior: incluye todas las opciones que quieras conservar.
+Las descargas de vídeo no se registran en el historial de MP3 de podcasts.

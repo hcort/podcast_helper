@@ -1,11 +1,6 @@
-<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Podcast Helper</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body><main>
+{% extends 'base.html' %}
+{% block title %}Descargar podcasts · Podcast Helper{% endblock %}
+{% block content %}
 <header><p class="eyebrow">TU BIBLIOTECA DE AUDIO</p><h1>Podcast Helper</h1>
 <p>Busca episodios de un podcast o pega los enlaces que quieras descargar.</p></header>
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
@@ -29,4 +24,4 @@
 {% if saved_folder %}<p>Procesamiento terminado en: <strong>{{ saved_folder }}</strong></p>{% else %}<p>No se generaron archivos para descargar.</p>{% endif %}
 <ul>{% for result in results %}<li><strong>{{ 'Error' if result.error else ('Ya descargado' if result.skipped else 'Procesado') }}</strong> — {{ result.url }}{% if result.error %}<p class="error">{{ result.error }}</p>{% endif %}</li>{% endfor %}</ul>
 </section>{% endif %}
-</main></body></html>
+{% endblock %}

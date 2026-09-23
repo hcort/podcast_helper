@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parent.parent
 TARGET = '/srv/sftp/downloads'
 
 
-def build_override(config_path, local_output=False, sftp_key=None):
+def build_override(config_path, local_output=False, sftp_key=None, local_videos=False):
     service = {}
     mounts = []
     if local_output:
@@ -22,6 +22,19 @@ def build_override(config_path, local_output=False, sftp_key=None):
         if not path.is_dir():
             raise ValueError(f'El directorio local no existe: {path}. Créalo antes de continuar.')
         mounts.append({'type': 'bind', 'source': str(path), 'target': TARGET,
+                       'bind': {'create_host_path': False}})
+    if local_videos:
+        config = json.loads(Path(config_path).read_text(encoding='utf-8-sig'))
+        folder = config.get('video_folder')
+        if not isinstance(folder, str) or not folder.strip():
+            raise ValueError('config.json debe definir video_folder como una ruta no vacía.')
+        path = Path(folder).expanduser()
+        if not path.is_absolute():
+            path = ROOT / path
+        path = path.resolve()
+        if not path.is_dir():
+            raise ValueError(f'El directorio local de vídeos no existe: {path}')
+        mounts.append({'type': 'bind', 'source': str(path), 'target': '/srv/sftp/videos',
                        'bind': {'create_host_path': False}})
     if sftp_key:
         key = Path(sftp_key).expanduser().resolve()
@@ -45,11 +58,12 @@ def build_override(config_path, local_output=False, sftp_key=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--local-output', action='store_true', help='Montar output_folder de config.json.')
+    parser.add_argument('--local-videos', action='store_true', help='Montar video_folder de config.json.')
     parser.add_argument('--config', type=Path, default=ROOT / 'res/config.json')
     parser.add_argument('--sftp-key', type=Path, help='Clave pública autorizada para SFTP.')
     args = parser.parse_args()
     try:
-        override = build_override(args.config, args.local_output, args.sftp_key)
+        override = build_override(args.config, args.local_output, args.sftp_key, args.local_videos)
     except (OSError, ValueError) as error:
         parser.error(str(error))
     destination = ROOT / 'docker/compose.local.json'

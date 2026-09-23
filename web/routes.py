@@ -40,6 +40,7 @@ def temporary_download(urls, context):
 
 
 @bp.route('/', methods=['GET', 'POST'])
+@bp.route('/podcasts', methods=['GET', 'POST'])
 def index():
     podcast_url = request.form.get('podcast_url', '').strip()
     episode_text = request.form.get('episode_urls', '')
