@@ -22,6 +22,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from slugify import slugify
 
 from abstract_podcast import AbstractPodcast
+from services.download_history import already_downloaded
 from get_driver import get_driver
 from get_driver import hijack_cookies, get_driver_opera
 from mp3_tags import write_mp3_tags, check_file_type, mp4_to_mp3
@@ -191,6 +192,8 @@ def get_episode(output_path, episode_url):
         podcast_title = driver.find_elements(By.CSS_SELECTOR, 'div.mb-6 > div.mb-2 > a')[1].text
         podcast_date = driver.find_element(By.CSS_SELECTOR, 'div.play-features-1 > div > span').text.split('·')[0].strip()
         episode_title = driver.find_element(By.CLASS_NAME, 'h2').text
+        if already_downloaded(podcast_title, episode_title):
+            return True
 
         btn_dnl = driver.find_element(By.CSS_SELECTOR, 'div.play-features-1 div.stat  button')
         WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'div.play-features-1 div.stat  button')))

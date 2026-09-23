@@ -12,6 +12,7 @@ from selenium.webdriver.common.by import By
 from slugify import slugify
 
 from abstract_podcast import AbstractPodcast
+from services.download_history import already_downloaded
 from import_selenium_cond import Keys
 from mp3_tags import write_id3_tags_dict
 from utils import download_file_requests_stream
@@ -87,6 +88,8 @@ def get_substack_episode(output_path, episode_url):
         episode_title = json_data['headline']
         episode_description = json_data['description']
         podcast_name = json_data['publisher']['name']
+        if already_downloaded(podcast_name, episode_title):
+            return True
         podcast_url = json_data['publisher']['url']
         podcast_author = json_data['author'][0]['name']
         episode_date = json_data['datePublished'][:10]

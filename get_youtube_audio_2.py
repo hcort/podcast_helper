@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 import yt_dlp
 
 from abstract_podcast import AbstractPodcast
+from services.download_history import already_downloaded
 from mp3_tags import write_mp3_tags
 
 YOUTUBE_HOSTS = {"youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"}
@@ -60,7 +61,7 @@ def download_youtube_audio(
     ffmpeg_location: str | os.PathLike[str] | None = None,
     cookies_from_browser: str | None = None,
     user_agent: str | None = None,
-) -> Path:
+) -> Path | None:
     """Download one YouTube video, convert it to MP3 and return its path.
 
     yt-dlp writes the thumbnail and embeds it as cover art.  FFmpeg is required
@@ -108,7 +109,12 @@ def download_youtube_audio(
         ydl_options["http_headers"] = {"User-Agent": user_agent}
 
     with yt_dlp.YoutubeDL(ydl_options) as downloader:
-        info = downloader.extract_info(url, download=True)
+        info = downloader.extract_info(url, download=False)
+        artist = info.get("artist") or info.get("creator") or info.get("uploader") or info.get("channel")
+        title = info.get("track") or info.get("title")
+        if already_downloaded(artist, title):
+            return None
+        info = downloader.process_ie_result(info, download=True)
         source_path = Path(downloader.prepare_filename(info))
 
     mp3_path = source_path.with_suffix(".mp3")

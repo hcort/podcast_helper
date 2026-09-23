@@ -8,6 +8,7 @@ import pytubefix
 from slugify import slugify
 
 from abstract_podcast import AbstractPodcast
+from services.download_history import already_downloaded
 from mp3_tags import mp4_to_mp3, write_id3_tags_dict
 from utils import download_file_requests_stream, get_download_folder
 
@@ -60,6 +61,8 @@ class YoutubePodcast(AbstractPodcast):
         try:
             # yt = pytubefix.YouTube(episode_url, use_po_token=use_po_token, po_token_verifier=po_token_verifier)
             yt = pytubefix.YouTube(episode_url, 'WEB')
+            if already_downloaded(yt.author, yt.title):
+                return True
             st = yt.streams.filter(mime_type='audio/mp4', only_audio=True).first()
             stream = st
             tag_dict = {

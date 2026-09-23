@@ -11,6 +11,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from abstract_podcast import AbstractPodcast
+from services.download_history import already_downloaded
 from get_driver import get_driver, hijack_cookies
 from utils import create_filename_and_folders, get_file_requests
 from mp3_tags import write_mp3_tags
@@ -121,6 +122,8 @@ def get_episode(episode_url, output_path):
             return False
         episode_title = json_dict['name']
         episode_autor = json_dict['partOfSeries']['name']
+        if already_downloaded(episode_autor, episode_title):
+            return True
         episode_date = json_dict['datePublished']
         requests_session = hijack_cookies(driver)
         mp3_filename = create_filename_and_folders(output_path, episode_autor, episode_title) + '.mp3'

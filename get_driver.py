@@ -9,7 +9,6 @@
     them into a Requests session
 """
 import os.path
-import shutil
 
 import requests
 from selenium import webdriver
@@ -18,8 +17,6 @@ from webdriver_manager.firefox import GeckoDriverManager
 
 # from selenium.webdriver.opera.options import Options
 from sys import platform
-
-from selenium.webdriver.firefox.service import Service
 
 from utils import read_config_object
 
@@ -75,27 +72,30 @@ def get_driver(headless=False):
         if use_opera:
             global_selenium_driver = get_driver_opera('', os.path.join(os.getcwd(), 'opera_prefs'))
         else:
-            firefox_loc = r'C:\Program Files\Mozilla Firefox\firefox.exe'
-            geckodriver_path = os.path.join(os.path.join(os.getcwd(), 'res'), 'geckodriver.exe')
-            shutil.copy(geckodriver_path, os.getcwd())
-            # service = Service(executable_path=firefox_loc)
-            # return webdriver.Firefox(service=service)
             options = webdriver.FirefoxOptions()
             options.set_preference("media.eme.enabled", True)
             options.set_preference("media.gmp-manager.updateEnabled", True)
-
-            options.binary_location = firefox_loc
-            # return webdriver.Firefox(timeout=30, firefox_options=options)
-            log_path = os.path.join(os.path.join(os.getcwd(), 'log'), 'geckodriver.log')
-            # global_selenium_driver = webdriver.Firefox()
-            global_selenium_driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=options)
+            firefox_loc = os.environ.get('FIREFOX_BINARY')
+            if firefox_loc:
+                options.binary_location = firefox_loc
+            if headless or os.environ.get('MOZ_HEADLESS') == '1':
+                options.add_argument('-headless')
+            driver_path = os.environ.get('GECKODRIVER_PATH')
+            service = Service(driver_path or GeckoDriverManager().install())
+            global_selenium_driver = webdriver.Firefox(service=service, options=options)
     return global_selenium_driver
 
 
 def close_and_remove_driver():
-    if global_selenium_driver:
-        global_selenium_driver.quit()
-        os.remove(os.path.join(os.getcwd(), geckodriver_name()))
+    global global_selenium_driver
+    driver = global_selenium_driver
+    global_selenium_driver = None
+    if driver:
+        driver.quit()
+        try:
+            os.remove(os.path.join(os.getcwd(), geckodriver_name()))
+        except FileNotFoundError:
+            pass
 
 
 def get_driver_opera(opera_exe_location, opera_preferences_location):

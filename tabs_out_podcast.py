@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 from slugify import slugify
 
 from abstract_podcast import AbstractPodcast
+from services.download_history import already_downloaded
 from mp3_tags import write_mp3_tags
 from utils import create_filename_and_folders, get_soup_from_requests, download_file_requests_stream
 
@@ -85,6 +86,8 @@ def get_episode(output_path, episode_url) -> bool:
     soup = BeautifulSoup(response.text, features='html.parser')
     episode_title = soup.select_one('h2.wp-block-heading').text
     episode_author = 'Tabs Out'
+    if already_downloaded(episode_author, episode_title):
+        return True
     episode_album = 'Podcast Tabs Out'
     podcast_date = soup.select_one('div.entry-content-inner > p').text
     podcast_artwork = soup.select_one('a.flexia-header-logo > img').get('src', '')

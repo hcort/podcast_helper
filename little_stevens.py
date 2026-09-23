@@ -7,6 +7,7 @@ from selenium.webdriver.common.by import By
 from slugify import slugify
 
 from abstract_podcast import AbstractPodcast
+from services.download_history import already_downloaded
 from get_driver import SeleniumDriver
 from get_substack_audio import download_file
 from mp3_tags import write_id3_tags_dict
@@ -70,6 +71,8 @@ class LittleStevensUndergroundGarage(AbstractPodcast):
                                                                podcast_title=f"{episode_name_slug} - {item['title']}",
                                                                filename=episode_name_slug) + '.mp3'
                     episode_title = f"{episode_name_slug} - {item['title']}.mp3"
+                    if already_downloaded('Little Stevens Underground Garage', episode_title):
+                        return True
                     # mp3_file_name = os.path.join(output_path, episode_title)
                     download_file_requests_stream(file_url=mp3_url, file_name=mp3_file_name, block_size=100)
 

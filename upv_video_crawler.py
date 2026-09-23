@@ -19,6 +19,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from slugify import slugify
 
 from abstract_podcast import AbstractPodcast
+from services.download_history import already_downloaded
 from get_driver import get_driver
 from get_substack_audio import download_file
 from mp3_tags import mp4_to_mp3, write_id3_tags_dict
@@ -221,6 +222,8 @@ def get_upv_episode(output_path, episode_url):
             'website': episode_url,
             'genre': 'Podcast'
         }
+        if already_downloaded(series, tag_dict['title']):
+            return True
         WebDriverWait(driver, timeout).until(
             expected_conditions.presence_of_element_located((By.ID, 'paellaiframe')))
         driver.switch_to.frame('paellaiframe')

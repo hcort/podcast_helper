@@ -12,6 +12,7 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 
 from abstract_podcast import AbstractPodcast
+from services.download_history import already_downloaded
 from get_driver import get_driver, hijack_cookies
 from utils import create_filename_and_folders
 from mp3_tags import write_mp3_tags
@@ -72,6 +73,8 @@ def get_episode(episode_url, output_path):
             return None
         episode_title = json_dict['name']
         episode_autor = json_dict['partOfSeries']['name']
+        if already_downloaded(episode_autor, episode_title):
+            return True
         # episode_description = json_dict['description']
         episode_date = json_dict['datePublished']
         episode_mp3_url = json_dict['associatedMedia']['contentUrl']

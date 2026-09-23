@@ -10,6 +10,7 @@ import feedparser
 from slugify import slugify
 
 from abstract_podcast import AbstractPodcast
+from services.download_history import already_downloaded
 from mp3_tags import write_mp3_tags
 from utils import download_file_requests_stream, create_filename_and_folders, get_soup_from_requests
 
@@ -62,6 +63,8 @@ class RssFeedPodcast(AbstractPodcast):
     def _parse_feed_item(self, item, feed):
         episode_title = item['title']
         podcast_title = feed['feed']['title']
+        if already_downloaded(podcast_title, episode_title):
+            return True
         podcast_date = item['published']
         podcast_mp3_url = None
         for l in item['links']:
