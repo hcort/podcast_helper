@@ -49,7 +49,7 @@ def firefox_location():
 
 
 def hijack_cookies(driver):
-    cookies = driver.get_cookies()
+    cookies = driver.get_cookies() if driver else []
     headers = {
         'User-Agent':
             'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 '
@@ -63,7 +63,7 @@ def hijack_cookies(driver):
     return s
 
 
-def get_driver(headless=False):
+def get_driver(headless=True):
     global global_selenium_driver
     use_opera = False
     if headless:

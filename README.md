@@ -244,3 +244,25 @@ usan POST y un token de sesión contra solicitudes cruzadas.
 
 Opcionalmente configura `FLASK_SECRET_KEY` con un secreto estable para mantener
 las sesiones al reiniciar; sin él, recarga la página del historial tras un reinicio.
+
+## Arrancar Flask desde Windows
+
+Desde CMD o PowerShell:
+
+```powershell
+.\run_flask.cmd
+```
+
+El script usa `venv\Scripts\python.exe`, cambia automáticamente a la carpeta
+del proyecto y abre el servidor en http://localhost:5000. También puedes
+invocarlo por su ruta completa desde cualquier carpeta. No necesitas activar
+el entorno virtual. Detén el servidor con Ctrl+C.
+
+Para cambiar el puerto si ya está ocupado:
+
+```powershell
+.\run_flask.cmd --port 5001
+```
+
+Este script arranca el servidor de desarrollo de Flask; el despliegue Docker
+sigue usando Gunicorn.

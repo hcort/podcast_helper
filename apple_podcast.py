@@ -91,46 +91,29 @@ def get_all_episodes(start_url):
 
 
 def get_episode(episode_url, output_path):
-    driver = get_driver()
-
-
-    if not episode_url or not driver:
+    if not episode_url:
         return False
-    driver.get(episode_url)
+
+    import requests
+    html = requests.get(episode_url)
     try:
-        try:
-            # podcast data no longer in HTML
-            play_button = driver.find_element(By.CSS_SELECTOR, 'span[data-testid="button-icon-play"]')
-            play_button.click()
-            timeout = 50
-            pause_button_present = EC.presence_of_element_located((By.CSS_SELECTOR, 'span[data-testid="button-icon-pause"]'))
-            WebDriverWait(driver, timeout).until(pause_button_present)
-            pause_button = driver.find_element(By.CSS_SELECTOR, 'span[data-testid="button-icon-pause"]')
-            pause_button.click()
-        except TimeoutException as ex:
-            print(f'Error clicking play/pause button {episode_url} - {ex}')
-            return False
-        audio = driver.find_element(By.TAG_NAME, 'audio')
-        episode_mp3_url = audio.get_attribute('src')
-        js = driver.find_elements(By.CSS_SELECTOR, 'script[type="application/ld+json"]')
-        json_dict = None
-        for json_data in js:
-            if json_data.get_attribute('innerHTML').find('\"@type\":\"PodcastEpisode\"') >= 0:
-                json_dict = json.loads(json_data.get_attribute('innerHTML'))
-        if not json_dict:
-            print(f'Episode info not found {episode_url}')
-            return False
-        episode_title = json_dict['name']
-        episode_autor = json_dict['partOfSeries']['name']
-        if already_downloaded(episode_autor, episode_title):
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html.text)
+        episode_json_str = soup.find('script', id='serialized-server-data').text
+        episode_json = json.loads(episode_json_str)
+        episode_title = episode_json['data'][0]['data']['title']
+        episode_mp3_url = episode_json['data'][0]['data']['shelves'][0]['items'][0]['contextAction']['episodeOffer']['mediaEnclosures'][0]['streamUrl']
+        episode_date = episode_json['data'][0]['data']['shelves'][0]['items'][0]['contextAction']['episodeOffer']['releaseDate']
+        episode_author = episode_json['data'][0]['data']['shelves'][0]['items'][0]['contextAction']['episodeOffer']['showOffer']['title']
+
+        if already_downloaded(episode_author, episode_title):
             return True
-        episode_date = json_dict['datePublished']
-        requests_session = hijack_cookies(driver)
-        mp3_filename = create_filename_and_folders(output_path, episode_autor, episode_title) + '.mp3'
+        requests_session = hijack_cookies(driver=None)
+        mp3_filename = create_filename_and_folders(output_path, episode_author, episode_title) + '.mp3'
         get_file_requests(requests_session, episode_mp3_url, mp3_filename)
-        write_mp3_tags(episode_title, episode_autor, episode_date, '', mp3_filename)
+        write_mp3_tags(episode_title, episode_author, episode_date, '', mp3_filename)
         return True
     except Exception as err:
-        print(f'{episode_url} - {driver.title} - {err}')
+        print(f'{episode_url} - {err}')
     return False
 
